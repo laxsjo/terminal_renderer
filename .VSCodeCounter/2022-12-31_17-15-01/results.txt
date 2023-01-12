@@ -1,0 +1,41 @@
+Date : 2022-12-31 17:15:01
+Directory : /home/rasmus/rust_projects/terminal_renderer
+Total : 12 files,  1796 codes, 0 comments, 278 blanks, all 2074 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| Rust     |         11 |      1,785 |          0 |        275 |      2,060 |
+| TOML     |          1 |         11 |          0 |          3 |         14 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++-------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                      | files      | code       | comment    | blank      | total      |
++-------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                         |         12 |      1,796 |          0 |        278 |      2,074 |
+| src                                                                                       |         11 |      1,785 |          0 |        275 |      2,060 |
+| src/rasmus_lib                                                                            |          9 |      1,752 |          0 |        264 |      2,016 |
+| src/rasmus_lib/input                                                                      |          2 |        870 |          0 |        118 |        988 |
+| src/rasmus_lib/renderable                                                                 |          3 |        496 |          0 |        100 |        596 |
++-------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                                                  | language | code       | comment    | blank      | total      |
++-------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| /home/rasmus/rust_projects/terminal_renderer/Cargo.toml                                   | TOML     |         11 |          0 |          3 |         14 |
+| /home/rasmus/rust_projects/terminal_renderer/src/lib.rs                                   | Rust     |         11 |          0 |          5 |         16 |
+| /home/rasmus/rust_projects/terminal_renderer/src/main.rs                                  | Rust     |         22 |          0 |          6 |         28 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/ansi_term.rs                  | Rust     |        211 |          0 |         15 |        226 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/input/mod.rs                  | Rust     |        696 |          0 |         88 |        784 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/input/string_editor.rs        | Rust     |        174 |          0 |         30 |        204 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/macros.rs                     | Rust     |         45 |          0 |          4 |         49 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/mod.rs                        | Rust     |          5 |          0 |          1 |          6 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/renderable/implementations.rs | Rust     |          8 |          0 |          2 |         10 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/renderable/mod.rs             | Rust     |        289 |          0 |         71 |        360 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/renderable/widgets.rs         | Rust     |        199 |          0 |         27 |        226 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/utils.rs                      | Rust     |        125 |          0 |         26 |        151 |
+| Total                                                                                     |          |      1,796 |          0 |        278 |      2,074 |
++-------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+

@@ -1,0 +1,14 @@
+"filename", "language", "TOML", "Rust", "comment", "blank", "total"
+"/home/rasmus/rust_projects/terminal_renderer/Cargo.toml", "TOML", 11, 0, 0, 3, 14
+"/home/rasmus/rust_projects/terminal_renderer/src/lib.rs", "Rust", 0, 11, 0, 5, 16
+"/home/rasmus/rust_projects/terminal_renderer/src/main.rs", "Rust", 0, 22, 0, 6, 28
+"/home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/ansi_term.rs", "Rust", 0, 211, 0, 15, 226
+"/home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/input/mod.rs", "Rust", 0, 696, 0, 88, 784
+"/home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/input/string_editor.rs", "Rust", 0, 174, 0, 30, 204
+"/home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/macros.rs", "Rust", 0, 45, 0, 4, 49
+"/home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/mod.rs", "Rust", 0, 5, 0, 1, 6
+"/home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/renderable/implementations.rs", "Rust", 0, 8, 0, 2, 10
+"/home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/renderable/mod.rs", "Rust", 0, 289, 0, 71, 360
+"/home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/renderable/widgets.rs", "Rust", 0, 199, 0, 27, 226
+"/home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/utils.rs", "Rust", 0, 125, 0, 26, 151
+"Total", "-", 11, 1785, 0, 278, 2074

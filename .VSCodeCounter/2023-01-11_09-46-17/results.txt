@@ -1,0 +1,84 @@
+Date : 2023-01-11 09:46:17
+Directory : /home/rasmus/rust_projects/terminal_renderer
+Total : 48 files,  6325 codes, 1583 comments, 1373 blanks, all 9281 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| Rust     |         47 |      6,306 |      1,583 |      1,371 |      9,260 |
+| TOML     |          1 |         19 |          0 |          2 |         21 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                     | files      | code       | comment    | blank      | total      |
++------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                        |         48 |      6,325 |      1,583 |      1,373 |      9,281 |
+| src                                                                                      |         47 |      6,306 |      1,583 |      1,371 |      9,260 |
+| src/rasmus_lib                                                                           |         29 |      4,064 |      1,108 |        794 |      5,966 |
+| src/rasmus_lib/ansi_term                                                                 |          6 |        276 |        117 |         63 |        456 |
+| src/rasmus_lib/ansi_term/private                                                         |          5 |        268 |        117 |         60 |        445 |
+| src/rasmus_lib/input                                                                     |          2 |        832 |        144 |        138 |      1,114 |
+| src/rasmus_lib/linear_ui                                                                 |          3 |        481 |         35 |        102 |        618 |
+| src/rasmus_lib/math                                                                      |          5 |      1,395 |        581 |        238 |      2,214 |
+| src/rasmus_lib/math/vec                                                                  |          1 |        294 |          0 |         36 |        330 |
+| src/rasmus_lib/ui                                                                        |          6 |        286 |         65 |         90 |        441 |
+| src/render_3d                                                                            |         13 |      1,912 |        299 |        469 |      2,680 |
+| src/render_3d/color                                                                      |          1 |        147 |          0 |         15 |        162 |
++------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                                                 | language | code       | comment    | blank      | total      |
++------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| /home/rasmus/rust_projects/terminal_renderer/Cargo.toml                                  | TOML     |         19 |          0 |          2 |         21 |
+| /home/rasmus/rust_projects/terminal_renderer/src/app.rs                                  | Rust     |          0 |         19 |          5 |         24 |
+| /home/rasmus/rust_projects/terminal_renderer/src/fun.rs                                  | Rust     |        145 |         16 |         32 |        193 |
+| /home/rasmus/rust_projects/terminal_renderer/src/lib.rs                                  | Rust     |        118 |         59 |         44 |        221 |
+| /home/rasmus/rust_projects/terminal_renderer/src/main.rs                                 | Rust     |         11 |         59 |         18 |         88 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/ansi_term/mod.rs             | Rust     |          8 |          0 |          3 |         11 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/ansi_term/private/cursor.rs  | Rust     |         82 |         57 |         22 |        161 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/ansi_term/private/format.rs  | Rust     |        114 |          0 |         17 |        131 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/ansi_term/private/line.rs    | Rust     |         10 |         12 |          4 |         26 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/ansi_term/private/mod.rs     | Rust     |         21 |          5 |          6 |         32 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/ansi_term/private/screen.rs  | Rust     |         41 |         43 |         11 |         95 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/ansi_term_old.rs             | Rust     |        211 |          0 |         15 |        226 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/events.rs                    | Rust     |         48 |          1 |         12 |         61 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/flags.rs                     | Rust     |         47 |          0 |         13 |         60 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/input/mod.rs                 | Rust     |        666 |        131 |        107 |        904 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/input/string_editor.rs       | Rust     |        166 |         13 |         31 |        210 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/linear_ui/implementations.rs | Rust     |          8 |          0 |          2 |         10 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/linear_ui/mod.rs             | Rust     |        273 |         34 |         73 |        380 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/linear_ui/widgets.rs         | Rust     |        200 |          1 |         27 |        228 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/macros.rs                    | Rust     |         37 |          8 |          3 |         48 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/math/general.rs              | Rust     |        331 |        284 |         79 |        694 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/math/matrix.rs               | Rust     |        372 |        287 |         60 |        719 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/math/mod.rs                  | Rust     |         13 |         10 |          8 |         31 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/math/vec.rs                  | Rust     |        385 |          0 |         55 |        440 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/math/vec/vec_ops.rs          | Rust     |        294 |          0 |         36 |        330 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/mod.rs                       | Rust     |         11 |          0 |          1 |         12 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/referenceable_vec.rs         | Rust     |         35 |         27 |         10 |         72 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/ui/app.rs                    | Rust     |          0 |          4 |          2 |          6 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/ui/gui.rs                    | Rust     |         79 |         11 |         29 |        119 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/ui/input_manager.rs          | Rust     |         41 |          5 |         11 |         57 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/ui/mod.rs                    | Rust     |         69 |         27 |         17 |        113 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/ui/panel.rs                  | Rust     |         66 |          5 |         18 |         89 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/ui/render.rs                 | Rust     |         31 |         13 |         13 |         57 |
+| /home/rasmus/rust_projects/terminal_renderer/src/rasmus_lib/utils.rs                     | Rust     |        405 |        130 |        109 |        644 |
+| /home/rasmus/rust_projects/terminal_renderer/src/render_3d/buffer.rs                     | Rust     |         62 |         10 |         17 |         89 |
+| /home/rasmus/rust_projects/terminal_renderer/src/render_3d/camera.rs                     | Rust     |         98 |          5 |         23 |        126 |
+| /home/rasmus/rust_projects/terminal_renderer/src/render_3d/color.rs                      | Rust     |        172 |         27 |         43 |        242 |
+| /home/rasmus/rust_projects/terminal_renderer/src/render_3d/color/color_ops.rs            | Rust     |        147 |          0 |         15 |        162 |
+| /home/rasmus/rust_projects/terminal_renderer/src/render_3d/drawers.rs                    | Rust     |        181 |         99 |         79 |        359 |
+| /home/rasmus/rust_projects/terminal_renderer/src/render_3d/mesh_loader.rs                | Rust     |        237 |          4 |         46 |        287 |
+| /home/rasmus/rust_projects/terminal_renderer/src/render_3d/mod.rs                        | Rust     |        248 |          8 |         46 |        302 |
+| /home/rasmus/rust_projects/terminal_renderer/src/render_3d/panel.rs                      | Rust     |         75 |          2 |         19 |         96 |
+| /home/rasmus/rust_projects/terminal_renderer/src/render_3d/quaternion.rs                 | Rust     |        314 |         78 |         75 |        467 |
+| /home/rasmus/rust_projects/terminal_renderer/src/render_3d/renderer.rs                   | Rust     |        180 |         45 |         44 |        269 |
+| /home/rasmus/rust_projects/terminal_renderer/src/render_3d/scene.rs                      | Rust     |         58 |          0 |         15 |         73 |
+| /home/rasmus/rust_projects/terminal_renderer/src/render_3d/shader.rs                     | Rust     |         31 |          5 |         15 |         51 |
+| /home/rasmus/rust_projects/terminal_renderer/src/render_3d/transform.rs                  | Rust     |        109 |         16 |         32 |        157 |
+| /home/rasmus/rust_projects/terminal_renderer/src/test_data.rs                            | Rust     |         56 |         23 |          9 |         88 |
+| Total                                                                                    |          |      6,325 |      1,583 |      1,373 |      9,281 |
++------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
