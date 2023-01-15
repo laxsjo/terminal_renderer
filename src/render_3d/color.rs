@@ -28,8 +28,12 @@ impl Rgb {
         )
     }
 
-    pub fn to_byte_rgb(self) -> ByteRgb {
+    pub fn to_byte(self) -> ByteRgb {
         self.into()
+    }
+
+    pub fn to_rgba(self, a: f32) -> Rgba {
+        Rgba { a, ..self.into() }
     }
 
     /// Convert color to the hsl colorspace.
@@ -58,6 +62,12 @@ impl AbsDiffEq for Rgb {
         self.r.abs_diff_eq(&other.r, epsilon)
             && self.g.abs_diff_eq(&other.g, epsilon)
             && self.b.abs_diff_eq(&other.b, epsilon)
+    }
+}
+
+impl From<Rgba> for Rgb {
+    fn from(rgba: Rgba) -> Self {
+        rgb(rgba.r, rgba.g, rgba.b)
     }
 }
 
@@ -134,7 +144,7 @@ pub struct ByteRgb {
 }
 
 impl ByteRgb {
-    pub fn to_rgb_slice(self) -> [u8; 3] {
+    pub fn to_slice(self) -> [u8; 3] {
         [self.r, self.g, self.b]
     }
     pub fn to_rgba_slice(self, alpha: u8) -> [u8; 4] {
@@ -167,12 +177,96 @@ where
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Default)]
+pub struct Rgba {
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+    pub a: f32,
+}
+impl Rgba {
+    pub fn normalize(self) -> Self {
+        rgba(
+            self.r.clamp(0., 1.),
+            self.g.clamp(0., 1.),
+            self.b.clamp(0., 1.),
+            self.a.clamp(0., 1.),
+        )
+    }
+
+    pub fn to_byte(self) -> ByteRgba {
+        self.into()
+    }
+
+    pub fn to_rgb(self) -> Rgb {
+        self.into()
+    }
+}
+
+impl From<Rgb> for Rgba {
+    fn from(rgb: Rgb) -> Self {
+        Self {
+            r: rgb.r,
+            g: rgb.g,
+            b: rgb.b,
+            a: 1.,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
+pub struct ByteRgba {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+    pub a: u8,
+}
+
+impl ByteRgba {
+    pub fn to_slice(self) -> [u8; 4] {
+        [self.r, self.g, self.b, self.a]
+    }
+}
+
+impl From<Rgba> for ByteRgba {
+    fn from(rgba: Rgba) -> Self {
+        byte_rgba(
+            (rgba.r * 255.) as u8,
+            (rgba.g * 255.) as u8,
+            (rgba.b * 255.) as u8,
+            (rgba.a * 255.) as u8,
+        )
+    }
+}
+
+impl<T> From<(T, T, T, T)> for ByteRgba
+where
+    T: Into<u8>,
+{
+    fn from(tuple: (T, T, T, T)) -> Self {
+        byte_rgba(
+            tuple.0.into(),
+            tuple.1.into(),
+            tuple.2.into(),
+            tuple.3.into(),
+        )
+    }
+}
+
 pub fn rgb(r: f32, g: f32, b: f32) -> Rgb {
     Rgb { r, g, b }
 }
 
 pub fn byte_rgb(r: u8, g: u8, b: u8) -> ByteRgb {
     ByteRgb { r, g, b }
+}
+
+pub fn rgba(r: f32, g: f32, b: f32, a: f32) -> Rgba {
+    Rgba { r, g, b, a }
+}
+
+pub fn byte_rgba(r: u8, g: u8, b: u8, a: u8) -> ByteRgba {
+    ByteRgba { r, g, b, a }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Default)]

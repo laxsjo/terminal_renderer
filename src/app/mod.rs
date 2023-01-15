@@ -1,6 +1,12 @@
+pub mod gui_display;
+mod state;
+pub mod terminal_display;
+
 use crate::math::*;
 use crate::render_3d::*;
 use crate::test_data;
+
+pub use state::*;
 
 pub fn init_scene() -> Scene {
     let mut scene = Scene::new();

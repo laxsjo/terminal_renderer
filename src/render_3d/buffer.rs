@@ -1,5 +1,6 @@
 use super::*;
 // use crate::math::*;
+use pixels::Pixels;
 use std::num;
 
 pub struct RenderBuffer {
@@ -86,3 +87,47 @@ impl RenderBuffer {
         }
     }
 }
+
+pub trait RenderBufferDrawable {
+    fn draw_render_buffer(&mut self, render_buffer: &RenderBuffer);
+}
+
+impl RenderBufferDrawable for Pixels {
+    fn draw_render_buffer(&mut self, render_buffer: &RenderBuffer) {
+        let size = self.context().texture_extent;
+        let frame = self.get_frame_mut();
+
+        for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
+            let x = (i % size.width as usize) as u32;
+            let y = (i / size.width as usize) as u32;
+
+            let color = match render_buffer.get_pixel_color(uvec2(x, y)) {
+                Some(color) => color.to_rgba(1.),
+                None => rgba(0., 0., 0., 0.),
+            }
+            .to_byte()
+            .to_slice();
+
+            pixel.copy_from_slice(&color);
+        }
+    }
+}
+
+// pub fn draw_render_buffer(pixels: &mut Pixels, buffer: &RenderBuffer) {
+//     let size = pixels.context().texture_extent;
+//     let frame = pixels.get_frame_mut();
+
+//     for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
+//         let x = (i % size.width as usize) as u32;
+//         let y = (i / size.width as usize) as u32;
+
+//         let color = match buffer.get_pixel_color(uvec2(x, y)) {
+//             Some(color) => color,
+//             None => Rgb::default(),
+//         }
+//         .to_byte()
+//         .to_rgba_slice(255);
+
+//         pixel.copy_from_slice(&color);
+//     }
+// }

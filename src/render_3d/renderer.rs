@@ -20,10 +20,7 @@ pub struct SceneInfo {
 }
 
 impl Renderer {
-    pub fn new() -> Self {
-        let (mut width, height) = crossterm::terminal::size().expect("couldn't get terminal size");
-        width /= 2;
-
+    pub fn new(width: usize, height: usize) -> Self {
         let buffer = RenderBuffer::new(
             NonZeroUsize::new(width as usize).unwrap(),
             NonZeroUsize::new(height as usize).unwrap(),
@@ -64,8 +61,10 @@ impl Renderer {
         self.buffer = buffer;
     }
 
-    pub fn set_size(&mut self, width: NonZeroUsize, height: NonZeroUsize) {
-        self.buffer = RenderBuffer::new(width, height)
+    pub fn resize(&mut self, width: usize, height: usize) -> Option<()> {
+        self.buffer = RenderBuffer::new(NonZeroUsize::new(width)?, NonZeroUsize::new(height)?);
+
+        Some(())
     }
 
     /// Returns the number of pixels as `(width, height)`.
@@ -298,11 +297,5 @@ impl Renderer {
 impl Debug for Renderer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("Renderer")
-    }
-}
-
-impl Default for Renderer {
-    fn default() -> Self {
-        Self::new()
     }
 }

@@ -1,9 +1,6 @@
-pub mod draw;
-
 use crate::app;
 use crate::render_3d::*;
 use pixels::{self, Pixels, SurfaceTexture};
-use std::num::NonZeroUsize;
 use winit::{
     dpi::LogicalSize,
     event::{Event, WindowEvent},
@@ -12,8 +9,8 @@ use winit::{
     window::WindowBuilder,
 };
 
-const WIDTH: u32 = 500;
-const HEIGHT: u32 = 800;
+const WIDTH: u32 = 800;
+const HEIGHT: u32 = 500;
 
 pub fn run() -> Result<(), pixels::Error> {
     let event_loop = EventLoop::new();
@@ -38,11 +35,7 @@ pub fn run() -> Result<(), pixels::Error> {
     };
 
     let scene = app::init_scene();
-    let mut renderer = Renderer::new();
-    renderer.set_size(
-        NonZeroUsize::new(window_size.width as usize).unwrap(),
-        NonZeroUsize::new(window_size.height as usize).unwrap(),
-    );
+    let mut renderer = Renderer::new(window_size.width as usize, window_size.height as usize);
 
     event_loop.run(move |event, _, control_flow| {
         if let Event::WindowEvent {
@@ -52,10 +45,7 @@ pub fn run() -> Result<(), pixels::Error> {
         {
             println!("Resized {:?}", size);
 
-            renderer.set_size(
-                NonZeroUsize::new(size.width as usize).unwrap(),
-                NonZeroUsize::new(size.height as usize).unwrap(),
-            );
+            renderer.resize(size.width.max(1) as usize, size.height.max(1) as usize);
             // println!("Resized buffer");
 
             // pixels.resize_buffer(size.width, size.height).unwrap();
@@ -67,7 +57,7 @@ pub fn run() -> Result<(), pixels::Error> {
         if let Event::RedrawRequested(_) = event {
             renderer.render_scene(&scene);
 
-            draw::draw_render_buffer(&mut pixels, renderer.buffer());
+            pixels.draw_render_buffer(renderer.buffer());
             if let Err(err) = pixels.render() {
                 eprintln!("pixels.render() failed: {err}");
                 *control_flow = ControlFlow::Exit;

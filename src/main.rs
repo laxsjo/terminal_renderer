@@ -1,6 +1,6 @@
 // use math::*;
 // use render_3d::Drawer;
-use crate::{gui_display, terminal_display};
+use crate::app;
 use std::env;
 use terminal_renderer::*;
 
@@ -20,9 +20,9 @@ fn main() {
     let mut args = env::args();
 
     if args.any(|str| str == "-t") {
-        terminal_display::run();
+        app::terminal_display::run();
     } else {
-        gui_display::run().expect("gui failed");
+        app::gui_display::run().expect("gui failed");
     }
 }
 

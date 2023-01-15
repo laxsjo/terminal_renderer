@@ -1482,6 +1482,7 @@ dependencies = [
  "static_init",
  "unicode-segmentation",
  "winit",
+ "winit_input_helper",
 ]
 
 [[package]]
@@ -2016,6 +2017,15 @@ dependencies = [
  "web-sys",
  "windows-sys 0.36.1",
  "x11-dl",
+]
+
+[[package]]
+name = "winit_input_helper"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de23d6018b4ff6e9a6bd069109b3c891a44acc97a212e744598c6971a9ee0384"
+dependencies = [
+ "winit",
 ]
 
 [[package]]

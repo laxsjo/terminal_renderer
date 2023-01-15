@@ -1,7 +1,6 @@
 use crate::{app, flags, fun::*, math::*, render_3d::*, ui};
 use crossterm::terminal;
 use itertools::*;
-use std::num::NonZeroUsize;
 
 pub fn run() {
     flags::TerminalFlags::set_raw_mode(true);
@@ -26,10 +25,9 @@ pub fn run() {
 
     let (width, height) = terminal::size().unwrap();
 
-    scene_panel.renderer.set_size(
-        NonZeroUsize::new(width as usize / 2).unwrap(),
-        NonZeroUsize::new(height as usize - 5).unwrap(),
-    );
+    scene_panel
+        .renderer
+        .resize(width as usize / 2, height as usize - 5);
 
     let scene_panel_ref = gui.add_panel(uvec2(1, 6), scene_panel);
 

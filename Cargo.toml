@@ -20,4 +20,6 @@ approx = "0.5.1"
 colors-transform = "0.2.4"
 static_init = "1.0.3"
 winit = "0.27.5"
+winit_input_helper = "0.13.0"
 pixels = "0.11.0"
+

@@ -11,10 +11,8 @@ pub use rasmus_lib::*;
 
 pub mod app;
 pub mod fun;
-pub mod gui_display;
 pub mod rasmus_lib;
 pub mod render_3d;
-pub mod terminal_display;
 pub mod test_data;
 
 pub const ACCENT_COLOR: Color = Color::Green;

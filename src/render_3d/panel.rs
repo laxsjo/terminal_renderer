@@ -14,9 +14,14 @@ pub struct ScenePanel {
 
 impl ScenePanel {
     pub fn new(scene: Scene) -> Self {
+        let (mut width, height) = crossterm::terminal::size().expect("couldn't get terminal size");
+        width /= 2;
+
+        let renderer = Renderer::new(width as usize, height as usize);
+
         Self {
             scene,
-            renderer: Renderer::new(),
+            renderer,
             debug_object: None,
             timer: DeltaTimer::new(),
             time: 0.,
@@ -70,7 +75,7 @@ impl ui::Panel for ScenePanel {
         for row in pixel_buffer.color.iter().rev() {
             let run_length_colors = row.run_length_encoding();
             for (color, length) in run_length_colors {
-                let color = color.to_byte_rgb();
+                let color = color.to_byte();
 
                 // println!("color: {:?}", color);
 
