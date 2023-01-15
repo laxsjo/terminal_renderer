@@ -265,11 +265,8 @@ impl Renderer {
             },
         );
 
-        for object in scene.iter() {
-            match object {
-                SceneObject::Object(object) => self.render_object(object, &shader, &scene.camera),
-                // SceneObject::Object(object) => self.render_object_wireframe(object, &scene.camera),
-            }
+        for object in scene.objects() {
+            self.render_object(object, &shader, &scene.camera);
         }
     }
 

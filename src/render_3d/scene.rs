@@ -2,11 +2,6 @@ use crate::utils::AnyIter;
 
 use super::*;
 
-#[derive(Debug)]
-pub enum SceneObject {
-    Object(Object),
-}
-
 #[derive(Debug, Clone, Copy)]
 pub struct ObjectId {
     index: usize,
@@ -16,7 +11,7 @@ pub struct ObjectId {
 pub struct Scene {
     pub camera: OrthographicCamera,
     pub light_direction: Vec3,
-    objects: Vec<(u32, SceneObject)>,
+    objects: Vec<(u32, Object)>,
     next_id: u32,
 }
 
@@ -30,7 +25,7 @@ impl Scene {
         }
     }
 
-    pub fn add_object(&mut self, object: SceneObject) -> ObjectId {
+    pub fn add_object(&mut self, object: Object) -> ObjectId {
         let index = self.objects.len();
         self.objects.push((self.next_id, object));
 
@@ -40,7 +35,7 @@ impl Scene {
         ObjectId { index, id }
     }
 
-    pub fn get_object(&self, id: ObjectId) -> Option<&SceneObject> {
+    pub fn get_object(&self, id: ObjectId) -> Option<&Object> {
         let item = self.objects.get(id.index)?;
         if item.0 != id.id {
             return None;
@@ -49,7 +44,7 @@ impl Scene {
         Some(&item.1)
     }
 
-    pub fn get_object_mut(&mut self, id: ObjectId) -> Option<&mut SceneObject> {
+    pub fn get_object_mut(&mut self, id: ObjectId) -> Option<&mut Object> {
         let item = self.objects.get_mut(id.index)?;
         if item.0 != id.id {
             return None;
@@ -58,8 +53,18 @@ impl Scene {
         Some(&mut item.1)
     }
 
-    pub fn iter(&self) -> AnyIter<&SceneObject> {
+    pub fn objects(&self) -> AnyIter<&Object> {
         let iter = self.objects.iter().map(|(_, object)| object);
+
+        AnyIter::new(iter)
+    }
+
+    pub fn object_refs(&self) -> AnyIter<ObjectId> {
+        let iter = self
+            .objects
+            .iter()
+            .enumerate()
+            .map(|(index, (id, _))| ObjectId { index, id: *id });
 
         AnyIter::new(iter)
     }

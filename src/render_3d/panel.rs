@@ -43,7 +43,7 @@ impl ui::Panel for ScenePanel {
             return;
         }
 
-        let SceneObject::Object(object) = self
+        let object = self
             .scene
             .get_object_mut(self.debug_object.unwrap())
             .unwrap();

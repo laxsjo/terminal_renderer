@@ -133,6 +133,15 @@ pub struct ByteRgb {
     pub b: u8,
 }
 
+impl ByteRgb {
+    pub fn to_rgb_slice(self) -> [u8; 3] {
+        [self.r, self.g, self.b]
+    }
+    pub fn to_rgba_slice(self, alpha: u8) -> [u8; 4] {
+        [self.r, self.g, self.b, alpha]
+    }
+}
+
 impl From<Rgb> for ByteRgb {
     fn from(rgb: Rgb) -> Self {
         let r = (rgb.r * 255.) as u8;
