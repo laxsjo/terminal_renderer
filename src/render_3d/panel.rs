@@ -55,15 +55,15 @@ impl ui::Panel for ScenePanel {
 
         self.time += self.timer.delta_s();
 
-        object.transform.rotation =
+        object.transform.rot =
             Quaternion::from_euler_angles(self.time * 2., self.time / 2., self.time);
     }
     fn render(&mut self) -> ui::Render {
         let (width, height) = self.renderer.get_size();
 
-        self.scene
-            .camera
-            .set_aspect_ratio(width as f32 / height as f32);
+        if let Some(camera) = self.scene.get_camera_mut() {
+            camera.set_aspect_ratio(width as f32 / height as f32);
+        }
 
         self.renderer.clear();
         self.renderer.render_scene(&self.scene);

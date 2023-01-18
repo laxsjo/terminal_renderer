@@ -1,6 +1,8 @@
 mod vec_ops;
 
 use num::integer::Roots;
+use num_traits::AsPrimitive;
+use winit::dpi::{LogicalPosition, LogicalSize, PhysicalPosition, PhysicalSize};
 // use vec_ops::*;
 // use approx
 
@@ -322,6 +324,42 @@ where
     }
 }
 
+impl<T> From<PhysicalSize<T>> for Vec2
+where
+    T: AsPrimitive<f32>,
+{
+    fn from(size: PhysicalSize<T>) -> Self {
+        vec2(size.width.as_(), size.height.as_())
+    }
+}
+
+impl<T> From<PhysicalPosition<T>> for Vec2
+where
+    T: AsPrimitive<f32>,
+{
+    fn from(size: PhysicalPosition<T>) -> Self {
+        vec2(size.x.as_(), size.y.as_())
+    }
+}
+
+impl<T> From<LogicalSize<T>> for Vec2
+where
+    T: AsPrimitive<f32>,
+{
+    fn from(size: LogicalSize<T>) -> Self {
+        vec2(size.width.as_(), size.height.as_())
+    }
+}
+
+impl<T> From<LogicalPosition<T>> for Vec2
+where
+    T: AsPrimitive<f32>,
+{
+    fn from(size: LogicalPosition<T>) -> Self {
+        vec2(size.x.as_(), size.y.as_())
+    }
+}
+
 impl approx::AbsDiffEq for Vec2 {
     type Epsilon = f32;
     fn default_epsilon() -> Self::Epsilon {
@@ -330,6 +368,18 @@ impl approx::AbsDiffEq for Vec2 {
 
     fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
         f32::abs(self.x - other.x) <= epsilon && f32::abs(self.y - other.y) <= epsilon
+    }
+}
+
+impl Display for Vec2 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_char('(')?;
+
+        std::fmt::Display::fmt(&self.x, f)?;
+        f.write_str(", ")?;
+        std::fmt::Display::fmt(&self.y, f)?;
+
+        f.write_char(')')
     }
 }
 

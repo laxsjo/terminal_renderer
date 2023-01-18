@@ -72,6 +72,11 @@ impl Renderer {
         (self.buffer.get_width(), self.buffer.get_height())
     }
 
+    pub fn aspect_ratio(&self) -> f32 {
+        let size = self.get_size();
+        aspect_ratio(vec2(size.0 as f32, size.1 as f32))
+    }
+
     // pub fn get_width(&self) -> usize {
     //     self.buffer.get_width()
     // }
@@ -159,9 +164,12 @@ impl Renderer {
     }
 
     pub fn render_object_wireframe(&mut self, object: &Object, camera: &impl Camera) {
+        let aspect_ratio = self.aspect_ratio();
         for Edge(a, b) in object.mesh.edges_iter() {
-            let projected_a = camera.project_point(object.transform.transform_point(a));
-            let projected_b = camera.project_point(object.transform.transform_point(b));
+            let projected_a =
+                camera.project_point(object.transform.transform_point(a), aspect_ratio);
+            let projected_b =
+                camera.project_point(object.transform.transform_point(b), aspect_ratio);
 
             self.draw_line(Line(projected_a.xy(), projected_b.xy()), rgb(1., 1., 1.));
         }
@@ -202,9 +210,12 @@ impl Renderer {
                     pos: tri.points.2,
                 }
             });
-            let projected_a = camera.project_point(tri.points.0);
-            let projected_b = camera.project_point(tri.points.1);
-            let projected_c = camera.project_point(tri.points.2);
+
+            let aspect_ratio = self.aspect_ratio();
+
+            let projected_a = camera.project_point(tri.points.0, aspect_ratio);
+            let projected_b = camera.project_point(tri.points.1, aspect_ratio);
+            let projected_c = camera.project_point(tri.points.2, aspect_ratio);
 
             let normal = tri.normal();
 
@@ -243,11 +254,15 @@ impl Renderer {
     }
 
     pub fn render_scene(&mut self, scene: &Scene) {
+        let Some(camera) = scene.get_camera() else {
+            self.buffer.clear();
+            return;
+        };
+
         let shader = ShaderProgram::new(
             SceneInfo {
                 light_direction: scene.light_direction,
             },
-            // &shader_fn::default,
             &|data, uniform| {
                 shader_fn::default(
                     PixelData {
@@ -265,7 +280,7 @@ impl Renderer {
         );
 
         for object in scene.objects() {
-            self.render_object(object, &shader, &scene.camera);
+            self.render_object(object, &shader, camera);
         }
     }
 

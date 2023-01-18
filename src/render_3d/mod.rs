@@ -19,8 +19,8 @@ mod quaternion;
 mod renderer;
 mod scene;
 pub mod shader;
-mod transform;
 pub mod shader_fn;
+mod transform;
 
 pub use buffer::*;
 pub use camera::*;
@@ -33,6 +33,7 @@ pub use renderer::*;
 pub use scene::*;
 pub use transform::*;
 
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct RefTriangle(pub Index<Vec3>, pub Index<Vec3>, pub Index<Vec3>);
 impl RefTriangle {
     pub const fn new(indices: (usize, usize, usize)) -> Self {
@@ -44,7 +45,7 @@ impl RefTriangle {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct Triangle {
     pub points: (Vec3, Vec3, Vec3),
     pub normals: (Vec3, Vec3, Vec3),
@@ -133,6 +134,7 @@ impl Edge {
     }
 }
 
+#[derive(Clone, PartialEq, PartialOrd)]
 pub struct Mesh {
     vertices: Vec<Vec3>,
     triangles: Vec<RefTriangle>,
@@ -270,7 +272,7 @@ impl Mesh {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct Object {
     pub mesh: Mesh,
     pub transform: Transform,

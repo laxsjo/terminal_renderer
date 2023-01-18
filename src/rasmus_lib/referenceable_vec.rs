@@ -61,7 +61,7 @@ impl<T> ReferenceableVec<T> for [T] {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[non_exhaustive]
 pub struct Index<T>(usize, std::marker::PhantomData<T>);
 impl<T> Index<T> {

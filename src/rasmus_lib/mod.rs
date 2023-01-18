@@ -1,5 +1,6 @@
 pub mod ansi_term;
 pub mod ansi_term_old;
+pub mod debug_utils;
 pub mod events;
 pub mod flags;
 pub mod input;

@@ -1,6 +1,7 @@
 // use math::*;
 // use render_3d::Drawer;
 use crate::app;
+use crate::has_value_changed;
 use std::env;
 use terminal_renderer::*;
 
@@ -16,13 +17,24 @@ fn main() {
     // )
     // .expect("couldn't push keyboard enhancement flags");
 
+    // let mut num = 0;
+
+    // for i in 0..10 {
+    //     if i % 2 == 0 {
+    //         num = i;
+    //     }
+    //     if has_value_changed!(num) {
+    //         println!("num changed to {}", num);
+    //     }
+    // }
+
     // TODO: Make better argument parsing system
     let mut args = env::args();
 
     if args.any(|str| str == "-t") {
         app::terminal_display::run();
     } else {
-        app::gui_display::run().expect("gui failed");
+        app::gui_display::run();
     }
 }
 

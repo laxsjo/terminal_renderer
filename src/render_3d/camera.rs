@@ -11,19 +11,19 @@ pub trait Camera {
     fn set_aspect_ratio(&mut self, aspect_ratio: f32);
     fn get_aspect_ratio(&self) -> f32;
 
-    fn aspect_scaling_matrix(&self) -> TransformationMatrix {
+    fn aspect_scaling_matrix(&self, aspect_ratio: f32) -> TransformationMatrix {
         TransformationMatrix::new(Matrix([
             [1., 0., 0., 0.],
-            [0., self.get_aspect_ratio(), 0., 0.],
+            [0., aspect_ratio, 0., 0.],
             [0., 0., 1., 0.],
             [0., 0., 0., 1.],
         ]))
     }
 
-    fn project_point(&self, mut point: Vec3) -> Vec3 {
+    fn project_point(&self, mut point: Vec3, aspect_ratio: f32) -> Vec3 {
         // Logic from here: https://en.wikipedia.org/wiki/Orthographic_projection#Geometry
         let mut matrix = self.matrix();
-        let scaling_matrix = self.aspect_scaling_matrix();
+        let scaling_matrix = self.aspect_scaling_matrix(aspect_ratio);
         matrix = matrix.combine(scaling_matrix);
 
         point -= self.position();
@@ -35,8 +35,8 @@ pub trait Camera {
 
 #[derive(Debug)]
 pub struct OrthographicCamera {
-    pub position: Vec3,
-    pub rotation: Quaternion,
+    pub pos: Vec3,
+    pub rot: Quaternion,
     pub width: f32,
     pub height: f32,
     pub far_plane: f32,
@@ -53,8 +53,8 @@ impl OrthographicCamera {
         near_plane: f32,
     ) -> Self {
         Self {
-            position: transform.position,
-            rotation: transform.rotation,
+            pos: transform.pos,
+            rot: transform.rot,
             width,
             height,
             far_plane,
@@ -66,10 +66,10 @@ impl OrthographicCamera {
 
 impl Camera for OrthographicCamera {
     fn position(&self) -> Vec3 {
-        self.position
+        self.pos
     }
     fn rotation(&self) -> Quaternion {
-        self.rotation
+        self.rot
     }
 
     fn matrix(&self) -> TransformationMatrix {
@@ -118,7 +118,7 @@ mod tests {
         let point = vec3(0.25, 2.64, -1.25);
 
         assert_abs_diff_eq!(
-            camera.project_point(point),
+            camera.project_point(point, 1.),
             vec3(0.0625, 0.66, -0.975_197_5)
         );
     }

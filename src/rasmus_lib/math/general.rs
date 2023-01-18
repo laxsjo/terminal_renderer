@@ -698,3 +698,9 @@ where
 {
     values.0 * weights.0 + values.1 * weights.1 + values.2 * weights.2
 }
+
+/// Calculates the aspect ratio of a given dimension using
+/// `width / height`.
+pub fn aspect_ratio(size: Vec2) -> f32 {
+    size.x / size.y
+}

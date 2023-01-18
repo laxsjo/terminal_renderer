@@ -9,7 +9,7 @@ pub struct ObjectId {
 }
 #[derive(Debug)]
 pub struct Scene {
-    pub camera: OrthographicCamera,
+    camera: Option<OrthographicCamera>,
     pub light_direction: Vec3,
     objects: Vec<(u32, Object)>,
     next_id: u32,
@@ -18,7 +18,7 @@ pub struct Scene {
 impl Scene {
     pub fn new() -> Self {
         Self {
-            camera: OrthographicCamera::new(Transform::identity(), 1., 1., 1., 0.1),
+            camera: None,
             light_direction: vec3(0., 0., -1.),
             objects: Vec::new(),
             next_id: 0,
@@ -51,6 +51,18 @@ impl Scene {
         }
 
         Some(&mut item.1)
+    }
+
+    pub fn add_camera(&mut self, camera: OrthographicCamera) {
+        self.camera = Some(camera);
+    }
+
+    pub fn get_camera(&self) -> Option<&OrthographicCamera> {
+        (&self.camera).as_ref()
+    }
+
+    pub fn get_camera_mut(&mut self) -> Option<&mut OrthographicCamera> {
+        (&mut self.camera).as_mut()
     }
 
     pub fn objects(&self) -> AnyIter<&Object> {

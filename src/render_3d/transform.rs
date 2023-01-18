@@ -55,43 +55,43 @@ impl TransformationMatrix {
 /// Represents an objects location, rotation and scale.
 ///
 /// **Note**: The api design was heavily inspired by Unity's `Transform` class (https://docs.unity3d.com/ScriptReference/Transform.html).
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct Transform {
-    pub position: Vec3,
+    pub pos: Vec3,
     pub scale: Vec3,
-    pub rotation: Quaternion,
+    pub rot: Quaternion,
 }
 
 impl Transform {
     pub const fn identity() -> Self {
         Self {
-            position: vec3(0., 0., 0.),
+            pos: vec3(0., 0., 0.),
             scale: vec3(1., 1., 1.),
-            rotation: Quaternion::identity(),
+            rot: Quaternion::identity(),
         }
     }
 
     pub fn new(position: Vec3, rotation: Quaternion, scale: Vec3) -> Self {
         Self {
-            position,
+            pos: position,
             scale,
-            rotation,
+            rot: rotation,
         }
     }
 
     pub fn new_position(position: Vec3) -> Self {
         Self {
-            position,
+            pos: position,
             scale: vec3(1., 1., 1.),
-            rotation: Quaternion::identity(),
+            rot: Quaternion::identity(),
         }
     }
 
     pub fn new_position_rotation(position: Vec3, rotation: Quaternion) -> Self {
         Self {
-            position,
+            pos: position,
             scale: vec3(1., 1., 1.),
-            rotation,
+            rot: rotation,
         }
     }
 
@@ -101,9 +101,9 @@ impl Transform {
     pub fn transform_point(&self, mut point: Vec3) -> Vec3 {
         point = point.scale_by(self.scale);
 
-        point = self.rotation.rotate_point(point);
+        point = self.rot.rotate_point(point);
 
-        point += self.position;
+        point += self.pos;
 
         point
     }
@@ -112,9 +112,9 @@ impl Transform {
     ///
     /// Inversely translates, rotates and then scales point, in that order.
     pub fn inverse_transform_point(&self, mut point: Vec3) -> Vec3 {
-        point -= self.position;
+        point -= self.pos;
 
-        point = self.rotation.inverse_rotate_point(point);
+        point = self.rot.inverse_rotate_point(point);
 
         point = point.inverse_scale_by(self.scale);
 
@@ -123,13 +123,13 @@ impl Transform {
 
     pub fn translate(&self, coords: Vec3) -> Self {
         Transform {
-            position: self.position + coords,
+            pos: self.pos + coords,
             ..*self
         }
     }
 
     pub fn translate_mut(&mut self, coords: Vec3) {
-        self.position += coords;
+        self.pos += coords;
     }
 
     pub fn scale(&self, scale: Vec3) -> Self {
@@ -145,12 +145,12 @@ impl Transform {
 
     pub fn rotate(&self, rotation: Quaternion) -> Self {
         Transform {
-            rotation: self.rotation.rotate_by(rotation),
+            rot: self.rot.rotate_by(rotation),
             ..*self
         }
     }
 
     pub fn rotate_mut(&mut self, rotation: Quaternion) {
-        self.rotation.rotate_by_mut(rotation);
+        self.rot.rotate_by_mut(rotation);
     }
 }

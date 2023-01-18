@@ -14,7 +14,7 @@ pub struct EulerAngles {
 /// Uses a quarternion representation internally.
 ///
 /// Algorithms from here: https://danceswithcode.net/engineeringnotes/quaternions/quaternions.html
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Quaternion {
     w: f32,
     x: f32,
@@ -23,6 +23,13 @@ pub struct Quaternion {
 }
 
 impl Quaternion {
+    pub const IDENTITY: Self = Self {
+        w: 1.,
+        x: 0.,
+        y: 0.,
+        z: 0.,
+    };
+
     /// Returns the identity rotation: (1, 0, 0, 0).
     pub const fn identity() -> Self {
         Quaternion {
@@ -210,9 +217,9 @@ impl Quaternion {
         let right = up.cross_product(forward).normalize();
         let up = forward.cross_product(right);
 
-        dbg!(&forward);
-        dbg!(&right);
-        dbg!(&up);
+        // dbg!(&forward);
+        // dbg!(&right);
+        // dbg!(&up);
 
         let mut matrix = Matrix::new(0.);
 
@@ -259,12 +266,27 @@ impl Quaternion {
         other * self
     }
 
-    /// Rotates self by another rotation in place, and then returns reference
-    /// to self.  
+    /// Rotates self by another rotation in place, and then returns mutable
+    /// reference to self.  
     pub fn rotate_by_mut(&mut self, other: Self) -> &mut Self {
         *self = other * *self;
 
         self
+    }
+
+    /// Rotates self by another rotation defined by an axis and angle.
+    pub fn rotate_axis_angle(self, axis: Vec3, angle: f32) -> Self {
+        let other = Self::from_axis_angle(axis, angle);
+
+        self.rotate_by(other)
+    }
+
+    /// Rotates self by another rotation defined by an axis and angle, and then
+    /// returns mutable reference to self.
+    pub fn rotate_axis_angle_mut(&mut self, axis: Vec3, angle: f32) -> &mut Self {
+        let other = Self::from_axis_angle(axis, angle);
+
+        self.rotate_by_mut(other)
     }
 
     /// Rotate point using this rotation.
