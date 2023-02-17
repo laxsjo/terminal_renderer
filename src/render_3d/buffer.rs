@@ -96,6 +96,11 @@ impl RenderBufferDrawable for Pixels {
     fn draw_render_buffer(&mut self, render_buffer: &RenderBuffer) {
         let size = self.context().texture_extent;
         let frame = self.get_frame_mut();
+        // println!("Drew to pixel buffer of size {:?}", size);
+        // println!(
+        //     "Drew render buffer of size {:?}",
+        //     render_buffer.get_dimensions()
+        // );
 
         for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
             let x = (i % size.width as usize) as u32;

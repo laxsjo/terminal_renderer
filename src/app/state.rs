@@ -1,10 +1,13 @@
 use std::time::Duration;
 
 use crate::{render_3d::*, utils::DeltaTimer};
-use pixels::{Pixels, SurfaceTexture};
+use pixels::{
+    wgpu::{self, RequestAdapterOptionsBase},
+    Pixels, PixelsBuilder, SurfaceTexture,
+};
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
-    error::OsError,
+    error::{ExternalError, OsError},
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::{Window, WindowBuilder},
@@ -85,7 +88,15 @@ impl StateMachine {
             PhysicalSize::new((buffer_height as f32 * aspect_ratio) as u32, buffer_height);
 
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-        let pixels = Pixels::new(buffer_size.width, buffer_size.height, surface_texture)?;
+        // let pixels = Pixels::new(buffer_size.width, buffer_size.height,
+        // surface_texture)?;
+        let pixels = PixelsBuilder::new(buffer_size.width, buffer_size.height, surface_texture)
+            .request_adapter_options(wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::HighPerformance,
+                force_fallback_adapter: true,
+                compatible_surface: None,
+            })
+            .build()?;
 
         let renderer = Renderer::new(
             buffer_size.width.max(1) as usize,
@@ -121,9 +132,13 @@ impl StateMachine {
 
         self.window.focus_window();
         // self.window.set_cursor_position(position);
-        self.window
+        match self
+            .window
             .set_cursor_grab(winit::window::CursorGrabMode::Locked)
-            .unwrap();
+        {
+            Ok(_) => {}
+            Err(err) => eprintln!("Encountered error {:?}", err),
+        };
 
         self.event_loop.run(move |event, _, control_flow| {
             // println!("event: {:?}, window id: {:?}", event, self.window.id());
@@ -137,13 +152,13 @@ impl StateMachine {
                     self.renderer.clear();
                     self.renderer.render_scene(&self.state.scene);
                     timer.restart();
-                    // println!("Rendered scene for {} ms", timer.delta_time().as_millis());
+                    println!("Rendered scene for {} ms", timer.delta_time().as_millis());
 
                     self.pixels.draw_render_buffer(self.renderer.buffer());
-                    // println!(
-                    //     "Drew render buffer for {} ms",
-                    //     timer.delta_time().as_millis()
-                    // );
+                    println!(
+                        "Drew render buffer for {} ms",
+                        timer.delta_time().as_millis()
+                    );
 
                     timer.restart();
                     if let Err(err) = self.pixels.render() {
@@ -164,9 +179,9 @@ impl StateMachine {
                 _ => {}
             }
             if self.input.update(&event) {
-                self.window
-                    .set_cursor_position(PhysicalPosition::new(100, 100))
-                    .unwrap();
+                // self.window
+                //     .set_cursor_position(PhysicalPosition::new(100, 100))
+                //     .unwrap();
                 if let Some(size) = self.input.window_resized() {
                     let aspect_ratio = size.width as f32 / size.height as f32;
                     let buffer_height = self.pixels.context().texture_extent.height;
@@ -174,8 +189,8 @@ impl StateMachine {
                         (buffer_height as f32 * aspect_ratio) as u32,
                         buffer_height,
                     );
-                    self.renderer
-                        .resize(buffer_size.width as usize, buffer_size.height as usize);
+                    // self.renderer
+                    //     .resize(buffer_size.width as usize, buffer_size.height as usize);
 
                     if let Err(err) = self.pixels.resize_surface(size.width, size.height) {
                         eprintln!("self.pixels.resize_surface() failed: {err}");
@@ -183,8 +198,10 @@ impl StateMachine {
                         return;
                     }
 
+                    println!("Old buffer height: {:?}", buffer_height);
                     if let Err(err) = self
                         .pixels
+                        // .resize_buffer(300, 200)
                         .resize_buffer(buffer_size.width, buffer_size.height)
                     {
                         eprintln!("self.pixels.resize_buffer() failed: {err}");

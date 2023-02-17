@@ -21,6 +21,7 @@ pub struct SceneInfo {
 
 impl Renderer {
     pub fn new(width: usize, height: usize) -> Self {
+        println!("Created renderer of size {}x{}", width, height);
         let buffer = RenderBuffer::new(
             NonZeroUsize::new(width as usize).unwrap(),
             NonZeroUsize::new(height as usize).unwrap(),
