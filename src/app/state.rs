@@ -1,13 +1,10 @@
 use std::time::Duration;
 
 use crate::{render_3d::*, utils::DeltaTimer};
-use pixels::{
-    wgpu::{self, RequestAdapterOptionsBase},
-    Pixels, PixelsBuilder, SurfaceTexture,
-};
+use pixels::{wgpu, Pixels, PixelsBuilder, SurfaceTexture};
 use winit::{
-    dpi::{PhysicalPosition, PhysicalSize},
-    error::{ExternalError, OsError},
+    dpi::PhysicalSize,
+    error::OsError,
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::{Window, WindowBuilder},
@@ -151,14 +148,10 @@ impl StateMachine {
                     let mut timer = DeltaTimer::new();
                     self.renderer.clear();
                     self.renderer.render_scene(&self.state.scene);
-                    timer.restart();
-                    println!("Rendered scene for {} ms", timer.delta_time().as_millis());
+                    let scene_time = timer.delta_time();
 
                     self.pixels.draw_render_buffer(self.renderer.buffer());
-                    println!(
-                        "Drew render buffer for {} ms",
-                        timer.delta_time().as_millis()
-                    );
+                    let render_buffer_time = timer.delta_time();
 
                     timer.restart();
                     if let Err(err) = self.pixels.render() {
@@ -166,7 +159,14 @@ impl StateMachine {
                         *control_flow = ControlFlow::Exit;
                         return;
                     }
-                    println!("Rendered pixels for {} ms", timer.delta_time().as_millis());
+                    let pixels_time = timer.delta_time();
+
+                    println!(
+                        "scene render: {} ms, copy buffer: {} ms, pixels render: {} ms",
+                        scene_time.as_millis(),
+                        render_buffer_time.as_millis(),
+                        pixels_time.as_millis()
+                    );
                 }
                 Event::WindowEvent {
                     window_id,

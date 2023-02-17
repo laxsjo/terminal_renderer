@@ -29,7 +29,7 @@ impl Default for DynamicPanel {
 
 impl ui::Panel for DynamicPanel {
     fn render(&mut self) -> ui::Render {
-        let ds = self.timer.delta_s() as f32;
+        let ds = self.timer.delta_s();
 
         self.a += ds * 2.;
         self.b += ds * 360.;

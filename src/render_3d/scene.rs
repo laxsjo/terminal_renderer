@@ -58,11 +58,11 @@ impl Scene {
     }
 
     pub fn get_camera(&self) -> Option<&OrthographicCamera> {
-        (&self.camera).as_ref()
+        self.camera.as_ref()
     }
 
     pub fn get_camera_mut(&mut self) -> Option<&mut OrthographicCamera> {
-        (&mut self.camera).as_mut()
+        self.camera.as_mut()
     }
 
     pub fn objects(&self) -> AnyIter<&Object> {

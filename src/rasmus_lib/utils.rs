@@ -84,9 +84,7 @@ impl StrUtils for str {
                 }
             }
 
-            if position != 0 {
-                position -= 1;
-            }
+            position = position.saturating_sub(1);
         }
 
         0

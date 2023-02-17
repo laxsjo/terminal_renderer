@@ -1,4 +1,4 @@
-use crate::{app::state::*, math::*, render_3d::*, has_value_changed, dbg_value_changed};
+use crate::{app::state::*, math::*, render_3d::*, dbg_value_changed};
 use std::f32::consts;
 use winit::{
     dpi::LogicalSize,

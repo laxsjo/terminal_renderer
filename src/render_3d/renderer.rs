@@ -23,8 +23,8 @@ impl Renderer {
     pub fn new(width: usize, height: usize) -> Self {
         println!("Created renderer of size {}x{}", width, height);
         let buffer = RenderBuffer::new(
-            NonZeroUsize::new(width as usize).unwrap(),
-            NonZeroUsize::new(height as usize).unwrap(),
+            NonZeroUsize::new(width).unwrap(),
+            NonZeroUsize::new(height).unwrap(),
         );
         Renderer { buffer }
     }
@@ -230,21 +230,21 @@ impl Renderer {
                     RenderVertex {
                         pos: projected_a.xy(),
                         albedo: object.color,
-                        depth: -projected_a.z as f32,
+                        depth: -projected_a.z,
                         normal: tri.normals.0,
                         vertex_color: tri.vertex_colors.0,
                     },
                     RenderVertex {
                         pos: projected_b.xy(),
                         albedo: object.color,
-                        depth: -projected_b.z as f32,
+                        depth: -projected_b.z,
                         normal: tri.normals.1,
                         vertex_color: tri.vertex_colors.1,
                     },
                     RenderVertex {
                         pos: projected_c.xy(),
                         albedo: object.color,
-                        depth: -projected_c.z as f32,
+                        depth: -projected_c.z,
                         normal: tri.normals.2,
                         vertex_color: tri.vertex_colors.2,
                     },

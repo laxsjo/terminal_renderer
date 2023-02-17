@@ -67,8 +67,8 @@ impl Drawer for AaLineDrawer {
         let offset = if is_steep { uvec2(1, 0) } else { uvec2(0, 1) };
         let coords = if is_steep { pxl_1.swap() } else { pxl_1 };
 
-        plot(coords, ((1. - end.y.fract()) * gap_x) as f32);
-        plot(coords + offset, (end.y.fract() * gap_x) as f32);
+        plot(coords, (1. - end.y.fract()) * gap_x);
+        plot(coords + offset, end.y.fract() * gap_x);
 
         let mut inter_y = end.y + gradient; // first y-intersection for the main loop
 
@@ -80,8 +80,8 @@ impl Drawer for AaLineDrawer {
         let offset = if is_steep { uvec2(1, 0) } else { uvec2(0, 1) };
         let coords = if is_steep { pxl_2.swap() } else { pxl_2 };
 
-        plot(coords, ((1. - end.y.fract()) * gap_x) as f32);
-        plot(coords + offset, (end.y.fract() * gap_x) as f32);
+        plot(coords, (1. - end.y.fract()) * gap_x);
+        plot(coords + offset, end.y.fract() * gap_x);
 
         // main loop
         for x in pxl_1.x + 1..pxl_2.x {
@@ -92,8 +92,8 @@ impl Drawer for AaLineDrawer {
                 offset = offset.swap();
             }
 
-            plot(coords, (1. - inter_y.fract()) as f32);
-            plot(coords + offset, (inter_y.fract()) as f32);
+            plot(coords, 1. - inter_y.fract());
+            plot(coords + offset, inter_y.fract());
             inter_y += gradient;
         }
     }
@@ -132,17 +132,17 @@ impl Drawer for UglyTriangleDrawer {
             weights: &(f32, f32, f32),
             screen_pos: Vec2,
         ) -> PixelData {
-            let albedo = vertices.0.albedo * weights.0 as f32
-                + vertices.1.albedo * weights.1 as f32
-                + vertices.2.albedo * weights.2 as f32;
+            let albedo = vertices.0.albedo * weights.0
+                + vertices.1.albedo * weights.1
+                + vertices.2.albedo * weights.2;
 
             let normal = vertices.0.normal * weights.0
                 + vertices.1.normal * weights.1
                 + vertices.2.normal * weights.2;
 
-            let depth = vertices.0.depth * weights.0 as f32
-                + vertices.1.depth * weights.1 as f32
-                + vertices.2.depth * weights.2 as f32;
+            let depth = vertices.0.depth * weights.0
+                + vertices.1.depth * weights.1
+                + vertices.2.depth * weights.2;
 
             let vertex_color = apply_3_weights(
                 (

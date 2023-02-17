@@ -117,7 +117,7 @@ impl From<Hsl> for Rgb {
 
 impl From<Vec3> for Rgb {
     fn from(vec: Vec3) -> Self {
-        rgb(vec.x as f32, vec.y as f32, vec.z as f32).normalize()
+        rgb(vec.x, vec.y, vec.z).normalize()
     }
 }
 
@@ -351,7 +351,7 @@ impl From<Rgb> for Hsl {
 
 impl From<Vec3> for Hsl {
     fn from(vec: Vec3) -> Self {
-        hsl(vec.x as f32, vec.y as f32, vec.z as f32).normalize()
+        hsl(vec.x, vec.y, vec.z).normalize()
     }
 }
 
