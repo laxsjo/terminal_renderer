@@ -17,21 +17,21 @@ impl RenderBuffer {
     }
 
     fn coords_exists(&self, coords: UVec2) -> bool {
-        (coords.x as usize) < self.get_width() && (coords.y as usize) < self.get_height()
+        (coords.x as usize) < self.width() && (coords.y as usize) < self.height()
     }
 
-    pub fn get_width(&self) -> usize {
+    pub fn width(&self) -> usize {
         self.color[0].len()
     }
-    pub fn get_height(&self) -> usize {
+    pub fn height(&self) -> usize {
         self.color.len()
     }
 
-    pub fn get_dimensions(&self) -> UDimensions {
-        udimensions(self.get_width(), self.get_height())
+    pub fn size(&self) -> UDimensions {
+        udimensions(self.width(), self.height())
     }
 
-    pub fn get_pixel_color(&self, coords: UVec2) -> Option<Rgb> {
+    pub fn pixel_color(&self, coords: UVec2) -> Option<Rgb> {
         if !self.coords_exists(coords) {
             return None;
         }
@@ -39,7 +39,7 @@ impl RenderBuffer {
         Some(self.color[coords.y as usize][coords.x as usize])
     }
 
-    pub fn get_pixel_depth(&self, coords: UVec2) -> Option<f32> {
+    pub fn pixel_depth(&self, coords: UVec2) -> Option<f32> {
         if !self.coords_exists(coords) {
             return None;
         }
@@ -52,7 +52,7 @@ impl RenderBuffer {
             return None;
         }
 
-        let current_depth = self.get_pixel_depth(coords).unwrap();
+        let current_depth = self.pixel_depth(coords).unwrap();
 
         // if current_depth > 0. {
         //     panic!("{} < {}", current_depth, depth);
@@ -106,7 +106,7 @@ impl RenderBufferDrawable for Pixels {
             let x = (i % size.width as usize) as u32;
             let y = (i / size.width as usize) as u32;
 
-            let color = match render_buffer.get_pixel_color(uvec2(x, y)) {
+            let color = match render_buffer.pixel_color(uvec2(x, y)) {
                 Some(color) => color.to_rgba(1.),
                 None => rgba(0., 0., 0., 0.),
             }

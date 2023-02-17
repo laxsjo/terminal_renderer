@@ -59,7 +59,7 @@ impl ui::Panel for ScenePanel {
             Quaternion::from_euler_angles(self.time * 2., self.time / 2., self.time);
     }
     fn render(&mut self) -> ui::Render {
-        let (width, height) = self.renderer.get_size();
+        let (width, height) = self.renderer.size();
 
         if let Some(camera) = self.scene.get_camera_mut() {
             camera.set_aspect_ratio(width as f32 / height as f32);

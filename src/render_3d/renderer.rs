@@ -30,7 +30,7 @@ impl Renderer {
     }
 
     fn normalized_to_buffer_space(&self, point: Vec2) -> UVec2 {
-        let (width, height) = self.get_size();
+        let (width, height) = self.size();
         Vec2 {
             x: (point.x * width as f32 + point.x) / 2.,
             y: (point.y * height as f32 + point.y) / 2.,
@@ -69,12 +69,12 @@ impl Renderer {
     }
 
     /// Returns the number of pixels as `(width, height)`.
-    pub fn get_size(&self) -> (usize, usize) {
-        (self.buffer.get_width(), self.buffer.get_height())
+    pub fn size(&self) -> (usize, usize) {
+        (self.buffer.width(), self.buffer.height())
     }
 
     pub fn aspect_ratio(&self) -> f32 {
-        let size = self.get_size();
+        let size = self.size();
         aspect_ratio(vec2(size.0 as f32, size.1 as f32))
     }
 
@@ -87,7 +87,7 @@ impl Renderer {
     // }
 
     pub fn get_pixel_value(&self, coords: UVec2) -> Option<Rgb> {
-        self.buffer.get_pixel_color(coords)
+        self.buffer.pixel_color(coords)
     }
 
     pub fn draw_coords_overlay(&mut self, coords: Vec2, color: Rgb, depth: f32) {
@@ -132,7 +132,7 @@ impl Renderer {
             return;
         };
 
-        let drawer = AaLineDrawer::new(self.buffer.get_dimensions());
+        let drawer = AaLineDrawer::new(self.buffer.size());
 
         drawer.draw(LineDrawParams(a, b, color), |coords, color| {
             self.set_pixel_overlay(coords, color, 0.);
@@ -146,7 +146,7 @@ impl Renderer {
     ) {
         // const RENDER_FRAME: (Vec2, Vec2) = (vec2(-1., -1.), vec2(1., 1.));
 
-        let drawer = UglyTriangleDrawer::new(self.buffer.get_dimensions());
+        let drawer = UglyTriangleDrawer::new(self.buffer.size());
 
         // if points.0.depth.is_nan() || points.1.depth.is_nan() || points.2.depth.is_nan() {
         //     panic!("{}, {}, {}", points.0.depth, points.1.depth, points.2.depth,)
