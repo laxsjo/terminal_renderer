@@ -8,6 +8,7 @@ use crate::utils::VecUtils;
 use std::collections::BTreeSet;
 use std::fmt::Debug;
 use std::fmt::Display;
+use std::num::NonZeroUsize;
 
 mod buffer;
 mod camera;
@@ -289,10 +290,26 @@ impl Object {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Default, Hash)]
 pub struct UDimensions {
     pub x: usize,
     pub y: usize,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Hash)]
+pub struct NonZeroUDimensions {
+    pub x: NonZeroUsize,
+    pub y: NonZeroUsize,
+}
+
+impl NonZeroUDimensions {
+    pub const fn new(x: NonZeroUsize, y: NonZeroUsize) -> Self {
+        Self { x, y }
+    }
+
+    pub fn get(&self) -> UDimensions {
+        udimensions(self.x.get(), self.y.get())
+    }
 }
 
 #[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
@@ -303,6 +320,16 @@ pub struct Dimensions {
 
 pub const fn udimensions(x: usize, y: usize) -> UDimensions {
     UDimensions { x, y }
+}
+
+pub const fn non_zero_udimensions(x: usize, y: usize) -> Option<NonZeroUDimensions> {
+    let Some(x) = NonZeroUsize::new(x) else {
+            return None;
+        };
+    let Some(y) = NonZeroUsize::new(y) else {
+            return None;
+        };
+    Some(NonZeroUDimensions::new(x, y))
 }
 
 pub const fn dimensions(x: f32, y: f32) -> Dimensions {

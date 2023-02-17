@@ -12,7 +12,7 @@ use std::{
     ops,
 };
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
@@ -228,7 +228,7 @@ impl Display for Vec3 {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug, Default)]
 pub struct Vec2 {
     pub x: f32,
     pub y: f32,
@@ -383,7 +383,7 @@ impl Display for Vec2 {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Hash)]
 pub struct UVec2 {
     pub x: u32,
     pub y: u32,
@@ -442,7 +442,7 @@ where
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Hash)]
 pub struct IVec2 {
     pub x: i32,
     pub y: i32,

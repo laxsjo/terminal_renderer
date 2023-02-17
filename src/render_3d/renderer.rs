@@ -1,10 +1,10 @@
 use super::*;
 use crate::math;
 use shader::*;
-use std::{fmt::Debug, num::NonZeroUsize};
+use std::fmt::Debug;
 
 pub struct Renderer {
-    buffer: RenderBuffer,
+    buffer: SingleRenderBuffer,
 }
 
 pub struct RenderVertex {
@@ -22,10 +22,7 @@ pub struct SceneInfo {
 impl Renderer {
     pub fn new(width: usize, height: usize) -> Self {
         println!("Created renderer of size {}x{}", width, height);
-        let buffer = RenderBuffer::new(
-            NonZeroUsize::new(width).unwrap(),
-            NonZeroUsize::new(height).unwrap(),
-        );
+        let buffer = SingleRenderBuffer::new(non_zero_udimensions(width, height).unwrap());
         Renderer { buffer }
     }
 
@@ -47,30 +44,28 @@ impl Renderer {
     //     color as f32 / 255.
     // }
 
-    pub fn buffer(&self) -> &RenderBuffer {
+    pub fn buffer(&self) -> &SingleRenderBuffer {
         &self.buffer
     }
 
     pub fn update_size(&mut self) {
         let (height, width) = crossterm::terminal::size().expect("Couldn't get terminal size");
 
-        let buffer = RenderBuffer::new(
-            NonZeroUsize::new(width as usize).unwrap(),
-            NonZeroUsize::new(height as usize).unwrap(),
-        );
+        let buffer =
+            SingleRenderBuffer::new(non_zero_udimensions(width as usize, height as usize).unwrap());
 
         self.buffer = buffer;
     }
 
     pub fn resize(&mut self, width: usize, height: usize) -> Option<()> {
-        self.buffer = RenderBuffer::new(NonZeroUsize::new(width)?, NonZeroUsize::new(height)?);
+        self.buffer = SingleRenderBuffer::new(non_zero_udimensions(width, height)?);
 
         Some(())
     }
 
     /// Returns the number of pixels as `(width, height)`.
     pub fn size(&self) -> (usize, usize) {
-        (self.buffer.width(), self.buffer.height())
+        (self.buffer.width().get(), self.buffer.height().get())
     }
 
     pub fn aspect_ratio(&self) -> f32 {
@@ -132,7 +127,7 @@ impl Renderer {
             return;
         };
 
-        let drawer = AaLineDrawer::new(self.buffer.size());
+        let drawer = AaLineDrawer::new(self.buffer.size().get());
 
         drawer.draw(LineDrawParams(a, b, color), |coords, color| {
             self.set_pixel_overlay(coords, color, 0.);
@@ -146,7 +141,7 @@ impl Renderer {
     ) {
         // const RENDER_FRAME: (Vec2, Vec2) = (vec2(-1., -1.), vec2(1., 1.));
 
-        let drawer = UglyTriangleDrawer::new(self.buffer.size());
+        let drawer = UglyTriangleDrawer::new(self.buffer.size().get());
 
         // if points.0.depth.is_nan() || points.1.depth.is_nan() || points.2.depth.is_nan() {
         //     panic!("{}, {}, {}", points.0.depth, points.1.depth, points.2.depth,)
