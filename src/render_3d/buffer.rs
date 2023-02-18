@@ -43,7 +43,7 @@ impl RenderBuffer {
     }
 
     fn coords_index(&self, coords: UVec2) -> usize {
-        (coords.y * coords.x + coords.x) as usize
+        (coords.y * self.size.x.get() as u32 + coords.x) as usize
     }
     fn index_coords(&self, index: usize) -> UVec2 {
         let x = (index % self.size.x.get()) as u32;
@@ -340,5 +340,20 @@ impl RenderBufferDrawable for Pixels {
 
             pixel.copy_from_slice(&color);
         }
+    }
+}
+
+mod tests {
+
+    #[test]
+    fn render_buffer_indices() {
+        use crate::math::*;
+        use crate::render_3d::{non_zero_udimensions, RenderBuffer};
+
+        let buffer = RenderBuffer::new(non_zero_udimensions(10, 5).unwrap());
+
+        let coords = uvec2(6, 2);
+
+        assert_eq!(buffer.coords_index(coords), 26);
     }
 }

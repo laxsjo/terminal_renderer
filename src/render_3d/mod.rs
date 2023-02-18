@@ -4,7 +4,6 @@ use crate::referenceable_vec::*;
 use crate::ui;
 use crate::utils::AnyIter;
 use crate::utils::DeltaTimer;
-use crate::utils::VecUtils;
 use std::collections::BTreeSet;
 use std::fmt::Debug;
 use std::fmt::Display;

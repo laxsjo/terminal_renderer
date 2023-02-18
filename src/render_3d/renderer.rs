@@ -1,6 +1,5 @@
 use super::*;
 use crate::math;
-use pixels::wgpu::FragmentState;
 use shader::*;
 use std::fmt::Debug;
 
@@ -21,7 +20,7 @@ pub struct SceneInfo {
 }
 
 impl Renderer {
-    pub fn new(width: usize, height: usize, segment_height: usize) -> Self {
+    pub fn new(width: usize, height: usize, _segment_height: usize) -> Self {
         println!("Created renderer of size {}x{}", width, height);
         let buffer = RenderBuffer::new(
             non_zero_udimensions(width, height).unwrap(),
