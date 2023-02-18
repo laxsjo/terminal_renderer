@@ -1,7 +1,12 @@
 use super::*;
 // use crate::math::*;
 use pixels::Pixels;
-use std::num::NonZeroUsize;
+use std::{iter::Copied, marker::PhantomData, num::NonZeroUsize};
+
+pub enum PixelValueType {
+    Color,
+    Depth,
+}
 
 #[derive(Clone, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Region {
@@ -28,7 +33,74 @@ pub trait WholeRenderBuffer: RenderBuffer {
     }
 }
 
+/* pub trait BufferPixelIter<'a, T>: Iterator<Item = (UVec2, T)> {} */
+
+// impl<'a, T> BufferPixelIter<'a, T> {
+//     pub fn new(iter: impl Iterator<Item = (UVec2, T)> + 'a) -> Self {
+//         Self {
+//             internal_iter: AnyIter::new(iter),
+//         }
+//     }
+// }
+
+// impl<'a, T> Iterator for BufferPixelIter<'a, T> {
+//     type Item = (UVec2, T);
+
+//     fn next(&mut self) -> Option<Self::Item> {
+//         self.internal_iter.next()
+//     }
+// }
+
+/* pub trait BufferPixelGridIter<'a, T>: Iterator<Item = Self::RowIter> {
+    type RowIter: Iterator<Item = T>;
+}
+ */
+// impl<'a, T> BufferPixelGridIter<'a, T> {
+//     pub fn new(iter: impl Iterator<Item = AnyIter<'a, T>> + 'a) -> Self {
+//         Self {
+//             internal_iter: AnyIter::new(iter),
+//         }
+//     }
+// }
+
+// impl<'a, T> Iterator for BufferPixelGridIter<'a, T> {
+//     type Item = AnyIter<'a, T>;
+
+//     fn next(&mut self) -> Option<Self::Item> {
+//         self.internal_iter.next()
+//     }
+// }
+
 pub trait RenderBuffer {
+    // type PixelIter<'a, T>: BufferPixelIter<'a, T>
+    // where
+    //     Self: 'a,
+    //     T: 'a;
+    // type PixelGridIter<'a, T>: BufferPixelGridIter<'a, T>
+    // where
+    //     Self: 'a,
+    //     T: 'a + Copy;
+    type PixelIter<'a, T>: Iterator<Item = (UVec2, T)>
+    where
+        Self: 'a,
+        T: 'a;
+
+    type PixelRowIter<'a, T>: Iterator<Item = T>
+    where
+        Self: 'a,
+        T: 'a;
+
+    type PixelGridIter<'a, T>: Iterator<Item = Self::PixelRowIter<'a, T>>
+    where
+        Self: 'a,
+        T: 'a;
+
+    fn colors(&self) -> Self::PixelIter<'_, Rgb>;
+    fn depths(&self) -> Self::PixelIter<'_, f32>;
+
+    fn colors_grid(&self) -> Self::PixelGridIter<'_, Rgb>;
+    fn depths_grid(&self) -> Self::PixelGridIter<'_, f32>;
+
     fn pixel_color(&self, coords: UVec2) -> Option<Rgb>;
 
     fn pixel_depth(&self, coords: UVec2) -> Option<f32>;
@@ -46,6 +118,163 @@ pub trait RenderBuffer {
         to_pos: UVec2,
     );
 }
+
+/*
+pub struct SingleRenderBufferIter<'a, T> {
+    buffer: &'a Vec<Vec<T>>,
+    index: usize,
+    back_index: usize,
+    len: usize,
+    _marker: PhantomData<T>,
+}
+impl<'a> SingleRenderBufferIter<'a, Rgb> {
+    fn new(buffer: SingleRenderBuffer) -> Self {
+        let len = buffer.width().get() * buffer.height().get();
+        Self {
+            buffer: &buffer.color,
+            index: 0,
+            back_index: len - 1,
+            len,
+            _marker: PhantomData,
+        }
+    }
+}
+impl<'a> SingleRenderBufferIter<'a, f32> {
+    fn new(buffer: SingleRenderBuffer) -> Self {
+        let len = buffer.width().get() * buffer.height().get();
+        Self {
+            buffer: &buffer.depth,
+            index: 0,
+            back_index: len - 1,
+            len,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<'a, T> Iterator for SingleRenderBufferIter<'a, T> {
+    type Item = (UVec2, T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index > self.back_index {
+            return None;
+        }
+        let x = self.index % self.buffer[0].len() as usize;
+        let y = self.index / self.buffer[0].len() as usize;
+
+        let value = self.buffer[y][x];
+
+        self.index += 1;
+
+        Some((uvec2(x as u32, y as u32), value))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len, Some(self.len))
+    }
+}
+
+impl<'a, T> DoubleEndedIterator for SingleRenderBufferIter<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.back_index < self.index {
+            return None;
+        }
+        let x = self.back_index % self.buffer[0].len() as usize;
+        let y = self.back_index / self.buffer[0].len() as usize;
+
+        let value = self.buffer[y][x];
+
+        self.back_index -= 1;
+
+        Some((uvec2(x as u32, y as u32), value))
+    }
+}
+
+impl<'a, T> BufferPixelIter<'a, T> for SingleRenderBufferIter<'a, T> {}
+
+pub struct SingleRenderBufferGridIter<'a, T>
+where
+    T: Copy,
+{
+    buffer: &'a Vec<Vec<T>>,
+    index: usize,
+    back_index: usize,
+    len: usize,
+    _marker: PhantomData<T>,
+}
+impl<'a> SingleRenderBufferGridIter<'a, Rgb> {
+    fn new(buffer: SingleRenderBuffer) -> Self {
+        let len = buffer.color.len();
+
+        Self {
+            buffer: &buffer.color,
+            index: 0,
+            back_index: len - 1,
+            len,
+            _marker: PhantomData,
+        }
+    }
+}
+impl<'a> SingleRenderBufferGridIter<'a, f32> {
+    fn new(buffer: SingleRenderBuffer) -> Self {
+        let len = buffer.depth.len();
+
+        Self {
+            buffer: &buffer.depth,
+            index: 0,
+            back_index: len - 1,
+            len,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<'a, T> BufferPixelGridIter<'a, T> for SingleRenderBufferGridIter<'a, T>
+where
+    T: Copy,
+{
+    type RowIter = Copied<std::slice::Iter<'a, T>>;
+}
+
+impl<'a, T> Iterator for SingleRenderBufferGridIter<'a, T>
+where
+    T: Copy,
+{
+    type Item = <Self as BufferPixelGridIter<'a, T>>::RowIter;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index > self.back_index {
+            return None;
+        }
+
+        let iter = self.buffer[self.index].iter().copied();
+
+        self.index += 1;
+
+        Some(iter)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len, Some(self.len))
+    }
+}
+
+impl<'a, T> DoubleEndedIterator for SingleRenderBufferGridIter<'a, T>
+where
+    T: Copy,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.back_index < self.index {
+            return None;
+        }
+
+        let iter = self.buffer[self.back_index].iter().copied();
+
+        self.index -= 1;
+
+        Some(iter)
+    }
+} */
 
 pub struct SingleRenderBuffer {
     pub color: Vec<Vec<Rgb>>,
@@ -76,6 +305,44 @@ impl WholeRenderBuffer for SingleRenderBuffer {
 }
 
 impl RenderBuffer for SingleRenderBuffer {
+    // type PixelIter<'a, T: 'a> = SingleRenderBufferIter<'a, T>;
+    // type PixelGridIter<'a, T: 'a> = SingleRenderBufferGridIter<'a, T> where T: Copy;
+    type PixelIter<'a, T: 'a> = AnyIter<'a, (UVec2, T)>;
+    type PixelRowIter<'a, T: 'a> = AnyIter<'a, T>;
+    type PixelGridIter<'a, T: 'a> = AnyIter<'a, Self::PixelRowIter<'a, T>>;
+
+    fn colors(&self) -> Self::PixelIter<'_, Rgb> {
+        AnyIter::new(self.color.iter().enumerate().flat_map(|(y, row)| {
+            row.iter()
+                .enumerate()
+                .map(move |(x, color)| (uvec2(x as u32, y as u32), *color))
+        }))
+    }
+
+    fn depths(&self) -> Self::PixelIter<'_, f32> {
+        AnyIter::new(self.depth.iter().enumerate().flat_map(|(y, row)| {
+            row.iter()
+                .enumerate()
+                .map(move |(x, depth)| (uvec2(x as u32, y as u32), *depth))
+        }))
+    }
+
+    fn colors_grid(&self) -> Self::PixelGridIter<'_, Rgb> {
+        AnyIter::new(
+            self.color
+                .iter()
+                .map(|row| AnyIter::new(row.iter().cloned())),
+        )
+    }
+
+    fn depths_grid(&self) -> Self::PixelGridIter<'_, f32> {
+        AnyIter::new(
+            self.depth
+                .iter()
+                .map(|row| AnyIter::new(row.iter().cloned())),
+        )
+    }
+
     fn pixel_color(&self, coords: UVec2) -> Option<Rgb> {
         if !self.coords_exists(coords) {
             return None;
@@ -153,7 +420,268 @@ impl RenderBuffer for SingleRenderBuffer {
         }
     }
 }
+/*
+pub struct SegmentedRenderBufferIter<'a, T> {
+    segments: &'a Vec<RenderBufferSegment>,
+    index: usize,
+    back_index: usize,
+    total_index: usize,
+    total_back_index: usize,
+    current_iter: BufferSegmentIter<'a, T>,
+    current_back_iter: BufferSegmentIter<'a, T>,
+    total_len: usize,
+    _marker: PhantomData<T>,
+}
+impl<'a> SegmentedRenderBufferIter<'a, Rgb> {
+    fn new(buffer: &SegmentedRenderBuffer) -> Self {
+        let count = buffer.segments.len();
+        let total_len = buffer.width().get() * buffer.height().get();
 
+        let current_iter = BufferSegmentIter::<'a, Rgb>::new(&buffer.segments[0]);
+        let current_back_iter = BufferSegmentIter::<'a, Rgb>::new(&buffer.segments[count - 1]);
+
+        Self {
+            segments: &buffer.segments,
+            index: 0,
+            back_index: count - 1,
+            total_index: 0,
+            total_back_index: total_len - 1,
+            current_iter,
+            current_back_iter,
+            total_len,
+            _marker: PhantomData,
+        }
+    }
+}
+impl<'a> SegmentedRenderBufferIter<'a, f32> {
+    fn new(buffer: &SegmentedRenderBuffer) -> Self {
+        let count = buffer.segments.len();
+        let total_len = buffer.width().get() * buffer.height().get();
+
+        let current_iter = BufferSegmentIter::<'a, f32>::new(&buffer.segments[0]);
+        let current_back_iter = BufferSegmentIter::<'a, f32>::new(&buffer.segments[count - 1]);
+
+        Self {
+            segments: &buffer.segments,
+            index: 0,
+            back_index: count - 1,
+            total_index: 0,
+            total_back_index: total_len - 1,
+            current_iter,
+            current_back_iter,
+            total_len,
+            _marker: PhantomData,
+        }
+    }
+}
+// impl<'a> SegmentedRenderBufferIter<'a, f32> {
+//     fn new(buffer: SingleRenderBuffer) -> Self {
+//         let len = buffer.width() * buffer.height();
+//         Self {
+//             buffer: &buffer.depth,
+//             index: 0,
+//             back_index: len - 1,
+//             len,
+//             _marker: PhantomData,
+//         }
+//     }
+// }
+
+impl<'a, T> Iterator for SegmentedRenderBufferIter<'a, T> {
+    type Item = (UVec2, T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.total_index > self.total_back_index {
+            return None;
+        }
+
+        let value = match self.current_iter.next() {
+            Some(value) => value,
+            None => {
+                self.index += 1;
+                if self.index >= self.segments.len() {
+                    return None;
+                }
+
+                self.current_iter = self.segments[self.index];
+                if let Some(value) = self.current_iter.next() {
+                    value
+                } else {
+                    return None;
+                }
+            }
+        };
+
+        self.total_index += 1;
+
+        Some(value)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.total_len, Some(self.total_len))
+    }
+}
+
+impl<'a, T> DoubleEndedIterator for SegmentedRenderBufferIter<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.total_index > self.total_back_index {
+            return None;
+        }
+
+        let value = match self.current_back_iter.next() {
+            Some(value) => value,
+            None => {
+                if self.back_index == 0 {
+                    return None;
+                }
+                self.back_index -= 1;
+
+                self.current_back_iter = self.segments[self.back_index];
+                if let Some(value) = self.current_back_iter.next() {
+                    value
+                } else {
+                    return None;
+                }
+            }
+        };
+
+        self.total_back_index.saturating_sub(1);
+
+        Some(value)
+    }
+}
+
+impl<'a, T> BufferPixelIter<'a, T> for SegmentedRenderBufferIter<'a, T> {}
+
+pub struct SegmentedRenderBufferGridIter<'a, T>
+where
+    T: Copy,
+{
+    segments: &'a Vec<RenderBufferSegment>,
+    index: usize,
+    back_index: usize,
+    total_index: usize,
+    total_back_index: usize,
+    current_iter: SingleRenderBufferGridIter<'a, T>,
+    current_back_iter: SingleRenderBufferGridIter<'a, T>,
+    total_len: usize,
+    _marker: PhantomData<T>,
+}
+impl<'a, T> SegmentedRenderBufferGridIter<'a, T>
+where
+    T: Copy,
+{
+    fn new(buffer: SegmentedRenderBuffer) -> Self {
+        let count = buffer.segments.len();
+        let total_len = buffer.height().get();
+
+        let current_iter = SingleRenderBufferGridIter::<'a, T>::new(buffer.segments[0]);
+        let current_back_iter =
+            SingleRenderBufferGridIter::<'a, T>::new(buffer.segments[count - 1]);
+
+        Self {
+            segments: &buffer.segments,
+            index: 0,
+            back_index: count - 1,
+            total_index: 0,
+            total_back_index: total_len - 1,
+            current_iter,
+            current_back_iter,
+            total_len,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<'a, T> BufferPixelGridIter<'a, T> for SegmentedRenderBufferGridIter<'a, T>
+where
+    T: Copy,
+{
+    type RowIter = std::slice::Iter<'a, T>;
+}
+
+impl<'a, T> Iterator for SegmentedRenderBufferGridIter<'a, T>
+where
+    T: Copy,
+{
+    type Item = <Self as BufferPixelGridIter<'a, T>>::RowIter;
+
+    // fn next(&mut self) -> Option<Self::Item> {
+    //     if self.index > self.back_index {
+    //         return None;
+    //     }
+
+    //     let iter = self.buffer[self.index].iter();
+
+    //     self.index += 1;
+
+    //     Some(iter)
+    // }
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.total_index > self.total_back_index {
+            return None;
+        }
+
+        let value = match self.current_iter.next() {
+            Some(value) => value,
+            None => {
+                self.index += 1;
+                if self.index >= self.segments {
+                    return None;
+                }
+
+                self.current_iter = self.segments[self.index];
+                if let Some(value) = self.current_iter.next() {
+                    value
+                } else {
+                    return None;
+                }
+            }
+        };
+
+        self.total_index += 1;
+
+        Some(value)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.total_len, Some(self.total_len))
+    }
+}
+
+impl<'a, T> DoubleEndedIterator for SegmentedRenderBufferGridIter<'a, T>
+where
+    T: Copy,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.total_index > self.total_back_index {
+            return None;
+        }
+
+        let value = match self.current_back_iter.next() {
+            Some(value) => value,
+            None => {
+                if self.back_index == 0 {
+                    return None;
+                }
+                self.back_index -= 1;
+
+                self.current_back_iter = self.segments[self.back_index];
+                if let Some(value) = self.current_back_iter.next() {
+                    value
+                } else {
+                    return None;
+                }
+            }
+        };
+
+        self.total_back_index.saturating_sub(1);
+
+        Some(value)
+    }
+}
+ */
 pub struct SegmentedRenderBuffer {
     segments: Vec<RenderBufferSegment>,
     segment_height: NonZeroUsize,
@@ -223,6 +751,27 @@ impl WholeRenderBuffer for SegmentedRenderBuffer {
 }
 
 impl RenderBuffer for SegmentedRenderBuffer {
+    // type PixelIter<'a, T: 'a> = SegmentedRenderBufferIter<'a, T>;
+    // type PixelGridIter<'a, T: 'a> = SegmentedRenderBufferGridIter<'a, T>where
+    // T: Copy,;
+    type PixelIter<'a, T: 'a> = AnyIter<'a, (UVec2, T)>;
+    type PixelRowIter<'a, T: 'a> = AnyIter<'a, T>;
+    type PixelGridIter<'a, T: 'a> = AnyIter<'a, Self::PixelRowIter<'a, T>>;
+
+    fn colors(&self) -> Self::PixelIter<'_, Rgb> {
+        Self::PixelIter::new(self)
+    }
+    fn depths(&self) -> Self::PixelIter<'_, f32> {
+        Self::PixelIter::new(self)
+    }
+
+    fn colors_grid(&self) -> Self::PixelGridIter<'_, Rgb> {
+        Self::PixelGridIter::new(self)
+    }
+    fn depths_grid(&self) -> Self::PixelGridIter<'_, f32> {
+        Self::PixelGridIter::new(self)
+    }
+
     fn pixel_color(&self, coords: UVec2) -> Option<Rgb> {
         if !self.coords_exists(coords) {
             return None;
@@ -334,12 +883,61 @@ impl RenderBuffer for SegmentedRenderBuffer {
 //     }
 // }
 
+/* pub struct BufferSegmentIter<'a, T> {
+    iter: SingleRenderBufferIter<'a, T>,
+    y_offset: u32,
+}
+
+impl<'a> BufferSegmentIter<'a, Rgb> {
+    pub fn new(buffer: &RenderBufferSegment) -> Self {
+        Self {
+            iter: SingleRenderBufferIter::new(buffer),
+            y_offset: buffer.vertical_index * buffer.buffer.height(),
+        }
+    }
+}
+impl<'a> BufferSegmentIter<'a, f32> {
+    pub fn new(buffer: &RenderBufferSegment) -> Self {
+        Self {
+            iter: SingleRenderBufferIter::new(buffer),
+            y_offset: buffer.vertical_index * buffer.buffer.height(),
+        }
+    }
+}
+
+impl<'a, T> Iterator for BufferSegmentIter<'a, T> {
+    type Item = (UVec2, T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut value = self.iter.next();
+
+        value.0.y += self.y_offset;
+
+        return value;
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.iter.size_hint()
+    }
+}
+
+impl<'a, T> DoubleEndedIterator for BufferSegmentIter<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let mut value = self.iter.next_back();
+        value.0.y += self.y_offset;
+
+        return value;
+    }
+}
+ */
+
 /// Represents a vertical segment of a larger RenderBuffer.
 ///
 /// This is used when dividing up rendering to multiple threads.
 pub struct RenderBufferSegment {
     pub buffer: SingleRenderBuffer,
     pub vertical_index: usize,
+    pub pos_y: usize,
     pub parent_size: NonZeroUDimensions,
 }
 
@@ -354,6 +952,7 @@ impl RenderBufferSegment {
             buffers.push(RenderBufferSegment {
                 buffer: SingleRenderBuffer::new(buffer_size),
                 vertical_index: 0,
+                pos_y: 0,
                 parent_size: buffer_size,
             });
 
@@ -378,6 +977,7 @@ impl RenderBufferSegment {
             buffers.push(RenderBufferSegment {
                 buffer: frag_buffer,
                 vertical_index: y,
+                pos_y: segment_max_height * y,
                 parent_size: buffer_size,
             })
         }
@@ -388,8 +988,8 @@ impl RenderBufferSegment {
     pub fn coords_within_bounds(&self, coords: UVec2) -> bool {
         let height = self.buffer.height().get();
         (coords.x as usize) < self.buffer.width().get()
-            && (coords.y as usize) >= height * self.vertical_index
-            && (coords.y as usize) < height * (self.vertical_index + 1)
+            && (coords.y as usize) >= self.pos_y
+            && (coords.y as usize) < (self.pos_y - height)
     }
 
     pub fn coords_to_segment_space(&self, mut coords: UVec2) -> UVec2 {
@@ -400,6 +1000,31 @@ impl RenderBufferSegment {
 }
 
 impl RenderBuffer for RenderBufferSegment {
+    // type PixelIter<'a, T: 'a> = SingleRenderBufferIter<'a, T>;
+    // type PixelGridIter<'a, T: 'a> = SingleRenderBufferGridIter<'a, T>where
+    // T: Copy,;
+    type PixelIter<'a, T: 'a> = AnyIter<'a, (UVec2, T)>;
+    type PixelRowIter<'a, T: 'a> = AnyIter<'a, T>;
+    type PixelGridIter<'a, T: 'a> = AnyIter<'a, Self::PixelRowIter<'a, T>>;
+
+    fn colors(&self) -> Self::PixelIter<'_, Rgb> {
+        AnyIter::new(
+            self.buffer
+                .colors()
+                .map(|value| (value.0 + uvec2(0, self.vertical_index),)),
+        )
+    }
+    fn depths(&self) -> Self::PixelIter<'_, f32> {
+        self.buffer.depths()
+    }
+
+    fn colors_grid(&self) -> Self::PixelGridIter<'_, Rgb> {
+        self.buffer.colors_grid()
+    }
+    fn depths_grid(&self) -> Self::PixelGridIter<'_, f32> {
+        self.buffer.depths_grid()
+    }
+
     fn pixel_color(&self, coords: UVec2) -> Option<Rgb> {
         self.buffer
             .pixel_color(self.coords_to_segment_space(coords))
