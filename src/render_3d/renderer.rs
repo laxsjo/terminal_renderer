@@ -1,10 +1,11 @@
 use super::*;
 use crate::math;
+use pixels::wgpu::FragmentState;
 use shader::*;
 use std::fmt::Debug;
 
 pub struct Renderer {
-    buffer: SingleRenderBuffer,
+    buffer: RenderBuffer,
 }
 
 pub struct RenderVertex {
@@ -20,9 +21,12 @@ pub struct SceneInfo {
 }
 
 impl Renderer {
-    pub fn new(width: usize, height: usize) -> Self {
+    pub fn new(width: usize, height: usize, segment_height: usize) -> Self {
         println!("Created renderer of size {}x{}", width, height);
-        let buffer = SingleRenderBuffer::new(non_zero_udimensions(width, height).unwrap());
+        let buffer = RenderBuffer::new(
+            non_zero_udimensions(width, height).unwrap(),
+            // NonZeroUsize::new(segment_height).unwrap(),
+        );
         Renderer { buffer }
     }
 
@@ -44,7 +48,7 @@ impl Renderer {
     //     color as f32 / 255.
     // }
 
-    pub fn buffer(&self) -> &SingleRenderBuffer {
+    pub fn buffer(&self) -> &RenderBuffer {
         &self.buffer
     }
 
@@ -52,13 +56,13 @@ impl Renderer {
         let (height, width) = crossterm::terminal::size().expect("Couldn't get terminal size");
 
         let buffer =
-            SingleRenderBuffer::new(non_zero_udimensions(width as usize, height as usize).unwrap());
+            RenderBuffer::new(non_zero_udimensions(width as usize, height as usize).unwrap());
 
         self.buffer = buffer;
     }
 
     pub fn resize(&mut self, width: usize, height: usize) -> Option<()> {
-        self.buffer = SingleRenderBuffer::new(non_zero_udimensions(width, height)?);
+        self.buffer = RenderBuffer::new(non_zero_udimensions(width, height)?);
 
         Some(())
     }
@@ -134,6 +138,7 @@ impl Renderer {
         });
     }
 
+    // TODO: Actually use the segmented render buffer
     pub fn draw_triangle(
         &mut self,
         points: (RenderVertex, RenderVertex, RenderVertex),

@@ -12,6 +12,7 @@ const WIDTH: u32 = 1200;
 const HEIGHT: u32 = 800;
 
 const BUFFER_HEIGHT: u32 = 300;
+const SEGMENT_HEIGHT: u32 = 500;
 
 pub fn run() {
     // let mut scene = Scene::new();
@@ -24,7 +25,7 @@ pub fn run() {
         .with_min_inner_size(size)
         .with_maximized(false);
 
-    let state_machine = match StateMachine::new(scene, window_builder, BUFFER_HEIGHT) {
+    let state_machine = match StateMachine::new(scene, window_builder, BUFFER_HEIGHT, SEGMENT_HEIGHT as usize) {
         Ok(ok) => ok,
         Err(err) => {
             panic!("state machine initialization failed: {:?}", err);

@@ -260,6 +260,69 @@ where
     }
 }
 
+pub struct RunLengthEncoded<'a, I: 'a, T> {
+    last_item: Option<&'a T>,
+    iter: I,
+}
+
+impl<'a, I, T> RunLengthEncoded<'a, I, T>
+where
+    I: Iterator<Item = &'a T>,
+{
+    pub fn new(mut iter: I) -> Self {
+        Self {
+            last_item: iter.next(),
+            iter,
+        }
+    }
+}
+
+impl<'a, I, T> Iterator for RunLengthEncoded<'a, I, T>
+where
+    I: Iterator<Item = &'a T>,
+    T: PartialEq,
+{
+    type Item = (&'a T, usize);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let item = self.last_item?;
+
+        let mut count = 1_usize;
+
+        loop {
+            self.last_item = self.iter.next();
+            let Some(next_item) = &self.last_item else {
+                break;
+            };
+            if next_item != &item {
+                break;
+            }
+
+            count += 1;
+        }
+
+        Some((item, count))
+    }
+}
+
+pub trait IterUtils<'a, T>: Iterator<Item = &'a T>
+where
+    Self: Sized,
+    T: PartialEq + 'a,
+{
+    fn run_length_encoded(self) -> RunLengthEncoded<'a, Self, T>;
+}
+
+impl<'a, I, T> IterUtils<'a, T> for I
+where
+    I: Iterator<Item = &'a T>,
+    T: PartialEq + 'a,
+{
+    fn run_length_encoded(self) -> RunLengthEncoded<'a, Self, T> {
+        RunLengthEncoded::new(self)
+    }
+}
+
 pub fn str_count_lines(string: &str) -> usize {
     string.chars().filter(|char| *char == '\n').count()
 }
@@ -599,6 +662,32 @@ impl<'a, T> Iterator for AnyIter<'a, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next()
+    }
+}
+
+pub struct DoubleEndedAnyIter<'a, T> {
+    iter: Box<dyn DoubleEndedIterator<Item = T> + 'a>,
+}
+
+impl<'a, T> DoubleEndedAnyIter<'a, T> {
+    pub fn new(iter: impl DoubleEndedIterator<Item = T> + 'a) -> Self {
+        Self {
+            iter: Box::new(iter),
+        }
+    }
+}
+
+impl<'a, T> Iterator for DoubleEndedAnyIter<'a, T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+}
+
+impl<'a, T> DoubleEndedIterator for DoubleEndedAnyIter<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.iter.next_back()
     }
 }
 

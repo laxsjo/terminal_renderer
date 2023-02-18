@@ -1,12 +1,9 @@
+use crate::utils::DoubleEndedAnyIter;
+
 use super::*;
 // use crate::math::*;
 use pixels::Pixels;
-use std::{iter::Copied, marker::PhantomData, num::NonZeroUsize};
-
-pub enum PixelValueType {
-    Color,
-    Depth,
-}
+use std::num::NonZeroUsize;
 
 #[derive(Clone, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Region {
@@ -18,792 +15,87 @@ impl Region {
     pub fn new(pos: UVec2, size: UDimensions) -> Self {
         Self { pos, size }
     }
-}
 
-pub trait WholeRenderBuffer: RenderBuffer {
-    fn coords_exists(&self, coords: UVec2) -> bool {
-        (coords.x as usize) < self.width().get() && (coords.y as usize) < self.height().get()
-    }
-
-    fn width(&self) -> NonZeroUsize;
-    fn height(&self) -> NonZeroUsize;
-
-    fn size(&self) -> NonZeroUDimensions {
-        NonZeroUDimensions::new(self.width(), self.height())
+    pub fn includes_point(&self, pos: UVec2) -> bool {
+        ((self.pos.x)..(self.pos.x + self.size.x as u32)).contains(&pos.x)
+            && ((self.pos.y)..(self.pos.y + self.size.y as u32)).contains(&pos.y)
     }
 }
 
-/* pub trait BufferPixelIter<'a, T>: Iterator<Item = (UVec2, T)> {} */
-
-// impl<'a, T> BufferPixelIter<'a, T> {
-//     pub fn new(iter: impl Iterator<Item = (UVec2, T)> + 'a) -> Self {
-//         Self {
-//             internal_iter: AnyIter::new(iter),
-//         }
-//     }
-// }
-
-// impl<'a, T> Iterator for BufferPixelIter<'a, T> {
-//     type Item = (UVec2, T);
-
-//     fn next(&mut self) -> Option<Self::Item> {
-//         self.internal_iter.next()
-//     }
-// }
-
-/* pub trait BufferPixelGridIter<'a, T>: Iterator<Item = Self::RowIter> {
-    type RowIter: Iterator<Item = T>;
-}
- */
-// impl<'a, T> BufferPixelGridIter<'a, T> {
-//     pub fn new(iter: impl Iterator<Item = AnyIter<'a, T>> + 'a) -> Self {
-//         Self {
-//             internal_iter: AnyIter::new(iter),
-//         }
-//     }
-// }
-
-// impl<'a, T> Iterator for BufferPixelGridIter<'a, T> {
-//     type Item = AnyIter<'a, T>;
-
-//     fn next(&mut self) -> Option<Self::Item> {
-//         self.internal_iter.next()
-//     }
-// }
-
-pub trait RenderBuffer {
-    // type PixelIter<'a, T>: BufferPixelIter<'a, T>
-    // where
-    //     Self: 'a,
-    //     T: 'a;
-    // type PixelGridIter<'a, T>: BufferPixelGridIter<'a, T>
-    // where
-    //     Self: 'a,
-    //     T: 'a + Copy;
-    type PixelIter<'a, T>: Iterator<Item = (UVec2, T)>
-    where
-        Self: 'a,
-        T: 'a;
-
-    type PixelRowIter<'a, T>: Iterator<Item = T>
-    where
-        Self: 'a,
-        T: 'a;
-
-    type PixelGridIter<'a, T>: Iterator<Item = Self::PixelRowIter<'a, T>>
-    where
-        Self: 'a,
-        T: 'a;
-
-    fn colors(&self) -> Self::PixelIter<'_, Rgb>;
-    fn depths(&self) -> Self::PixelIter<'_, f32>;
-
-    fn colors_grid(&self) -> Self::PixelGridIter<'_, Rgb>;
-    fn depths_grid(&self) -> Self::PixelGridIter<'_, f32>;
-
-    fn pixel_color(&self, coords: UVec2) -> Option<Rgb>;
-
-    fn pixel_depth(&self, coords: UVec2) -> Option<f32>;
-
-    fn set_pixel_color(&mut self, coords: UVec2, color: Rgb, depth: f32) -> Option<bool>;
-
-    fn overwrite_pixel_color(&mut self, coords: UVec2, color: Rgb, depth: f32) -> Option<()>;
-
-    fn clear(&mut self);
-
-    fn copy_region_from_other(
-        &mut self,
-        from_buffer: &(impl RenderBuffer + WholeRenderBuffer),
-        from_region: Region,
-        to_pos: UVec2,
-    );
+pub struct RenderBuffer {
+    colors: Vec<Rgb>,
+    depths: Vec<f32>,
+    size: NonZeroUDimensions,
 }
 
-/*
-pub struct SingleRenderBufferIter<'a, T> {
-    buffer: &'a Vec<Vec<T>>,
-    index: usize,
-    back_index: usize,
-    len: usize,
-    _marker: PhantomData<T>,
-}
-impl<'a> SingleRenderBufferIter<'a, Rgb> {
-    fn new(buffer: SingleRenderBuffer) -> Self {
-        let len = buffer.width().get() * buffer.height().get();
-        Self {
-            buffer: &buffer.color,
-            index: 0,
-            back_index: len - 1,
-            len,
-            _marker: PhantomData,
-        }
-    }
-}
-impl<'a> SingleRenderBufferIter<'a, f32> {
-    fn new(buffer: SingleRenderBuffer) -> Self {
-        let len = buffer.width().get() * buffer.height().get();
-        Self {
-            buffer: &buffer.depth,
-            index: 0,
-            back_index: len - 1,
-            len,
-            _marker: PhantomData,
-        }
-    }
-}
-
-impl<'a, T> Iterator for SingleRenderBufferIter<'a, T> {
-    type Item = (UVec2, T);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index > self.back_index {
-            return None;
-        }
-        let x = self.index % self.buffer[0].len() as usize;
-        let y = self.index / self.buffer[0].len() as usize;
-
-        let value = self.buffer[y][x];
-
-        self.index += 1;
-
-        Some((uvec2(x as u32, y as u32), value))
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.len, Some(self.len))
-    }
-}
-
-impl<'a, T> DoubleEndedIterator for SingleRenderBufferIter<'a, T> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        if self.back_index < self.index {
-            return None;
-        }
-        let x = self.back_index % self.buffer[0].len() as usize;
-        let y = self.back_index / self.buffer[0].len() as usize;
-
-        let value = self.buffer[y][x];
-
-        self.back_index -= 1;
-
-        Some((uvec2(x as u32, y as u32), value))
-    }
-}
-
-impl<'a, T> BufferPixelIter<'a, T> for SingleRenderBufferIter<'a, T> {}
-
-pub struct SingleRenderBufferGridIter<'a, T>
-where
-    T: Copy,
-{
-    buffer: &'a Vec<Vec<T>>,
-    index: usize,
-    back_index: usize,
-    len: usize,
-    _marker: PhantomData<T>,
-}
-impl<'a> SingleRenderBufferGridIter<'a, Rgb> {
-    fn new(buffer: SingleRenderBuffer) -> Self {
-        let len = buffer.color.len();
-
-        Self {
-            buffer: &buffer.color,
-            index: 0,
-            back_index: len - 1,
-            len,
-            _marker: PhantomData,
-        }
-    }
-}
-impl<'a> SingleRenderBufferGridIter<'a, f32> {
-    fn new(buffer: SingleRenderBuffer) -> Self {
-        let len = buffer.depth.len();
-
-        Self {
-            buffer: &buffer.depth,
-            index: 0,
-            back_index: len - 1,
-            len,
-            _marker: PhantomData,
-        }
-    }
-}
-
-impl<'a, T> BufferPixelGridIter<'a, T> for SingleRenderBufferGridIter<'a, T>
-where
-    T: Copy,
-{
-    type RowIter = Copied<std::slice::Iter<'a, T>>;
-}
-
-impl<'a, T> Iterator for SingleRenderBufferGridIter<'a, T>
-where
-    T: Copy,
-{
-    type Item = <Self as BufferPixelGridIter<'a, T>>::RowIter;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index > self.back_index {
-            return None;
-        }
-
-        let iter = self.buffer[self.index].iter().copied();
-
-        self.index += 1;
-
-        Some(iter)
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.len, Some(self.len))
-    }
-}
-
-impl<'a, T> DoubleEndedIterator for SingleRenderBufferGridIter<'a, T>
-where
-    T: Copy,
-{
-    fn next_back(&mut self) -> Option<Self::Item> {
-        if self.back_index < self.index {
-            return None;
-        }
-
-        let iter = self.buffer[self.back_index].iter().copied();
-
-        self.index -= 1;
-
-        Some(iter)
-    }
-} */
-
-pub struct SingleRenderBuffer {
-    pub color: Vec<Vec<Rgb>>,
-    pub depth: Vec<Vec<f32>>,
-}
-
-impl SingleRenderBuffer {
+impl RenderBuffer {
     pub fn new(size: NonZeroUDimensions) -> Self {
+        let len = size.x.get() * size.y.get();
         Self {
-            color: vec![vec![Rgb::default(); size.x.get()]; size.y.get()],
-            depth: vec![vec![f32::MAX; size.x.get()]; size.y.get()],
-        }
-    }
-}
-
-impl WholeRenderBuffer for SingleRenderBuffer {
-    fn width(&self) -> NonZeroUsize {
-        // println!(
-        //     "Got width {}, depth {}",
-        //     self.color[0].len(),
-        //     self.depth[0].len()
-        // );
-        NonZeroUsize::new(self.color[0].len()).expect("color array has zero length")
-    }
-    fn height(&self) -> NonZeroUsize {
-        NonZeroUsize::new(self.color.len()).expect("color array has zero length")
-    }
-}
-
-impl RenderBuffer for SingleRenderBuffer {
-    // type PixelIter<'a, T: 'a> = SingleRenderBufferIter<'a, T>;
-    // type PixelGridIter<'a, T: 'a> = SingleRenderBufferGridIter<'a, T> where T: Copy;
-    type PixelIter<'a, T: 'a> = AnyIter<'a, (UVec2, T)>;
-    type PixelRowIter<'a, T: 'a> = AnyIter<'a, T>;
-    type PixelGridIter<'a, T: 'a> = AnyIter<'a, Self::PixelRowIter<'a, T>>;
-
-    fn colors(&self) -> Self::PixelIter<'_, Rgb> {
-        AnyIter::new(self.color.iter().enumerate().flat_map(|(y, row)| {
-            row.iter()
-                .enumerate()
-                .map(move |(x, color)| (uvec2(x as u32, y as u32), *color))
-        }))
-    }
-
-    fn depths(&self) -> Self::PixelIter<'_, f32> {
-        AnyIter::new(self.depth.iter().enumerate().flat_map(|(y, row)| {
-            row.iter()
-                .enumerate()
-                .map(move |(x, depth)| (uvec2(x as u32, y as u32), *depth))
-        }))
-    }
-
-    fn colors_grid(&self) -> Self::PixelGridIter<'_, Rgb> {
-        AnyIter::new(
-            self.color
-                .iter()
-                .map(|row| AnyIter::new(row.iter().cloned())),
-        )
-    }
-
-    fn depths_grid(&self) -> Self::PixelGridIter<'_, f32> {
-        AnyIter::new(
-            self.depth
-                .iter()
-                .map(|row| AnyIter::new(row.iter().cloned())),
-        )
-    }
-
-    fn pixel_color(&self, coords: UVec2) -> Option<Rgb> {
-        if !self.coords_exists(coords) {
-            return None;
-        }
-
-        Some(self.color[coords.y as usize][coords.x as usize])
-    }
-
-    fn pixel_depth(&self, coords: UVec2) -> Option<f32> {
-        if !self.coords_exists(coords) {
-            return None;
-        }
-
-        Some(self.depth[coords.y as usize][coords.x as usize])
-    }
-
-    fn set_pixel_color(&mut self, coords: UVec2, color: Rgb, depth: f32) -> Option<bool> {
-        if !self.coords_exists(coords) {
-            return None;
-        }
-
-        let current_depth = self.pixel_depth(coords).unwrap();
-
-        if current_depth < depth {
-            return Some(false);
-        }
-
-        self.color[coords.y as usize][coords.x as usize] = color;
-        self.depth[coords.y as usize][coords.x as usize] = depth;
-
-        Some(true)
-    }
-
-    fn overwrite_pixel_color(&mut self, coords: UVec2, color: Rgb, depth: f32) -> Option<()> {
-        if !self.coords_exists(coords) {
-            return None;
-        }
-
-        self.color[coords.y as usize][coords.x as usize] = color;
-        self.depth[coords.y as usize][coords.x as usize] = depth;
-
-        Some(())
-    }
-
-    fn clear(&mut self) {
-        for rows in self.color.iter_mut() {
-            for pixel in rows.iter_mut() {
-                *pixel = Rgb::default();
-            }
-        }
-        for rows in self.depth.iter_mut() {
-            for pixel in rows.iter_mut() {
-                *pixel = f32::MAX;
-            }
+            colors: vec![Rgb::default(); len],
+            depths: vec![f32::MAX; len],
+            size,
         }
     }
 
-    fn copy_region_from_other(
-        &mut self,
-        from_buffer: &(impl RenderBuffer + WholeRenderBuffer),
-        from_region: Region,
-        to_pos: UVec2,
-    ) {
-        for y in 0..from_region.size.y {
-            for x in 0..from_region.size.x {
-                let offset = uvec2(x as u32, y as u32);
-                let Some(color) = from_buffer.pixel_color(from_region.pos + offset) else {
-                    continue;
-                };
-                let Some(depth) = from_buffer.pixel_depth(from_region.pos + offset) else {
-                    continue;
-                };
-                self.overwrite_pixel_color(to_pos + offset, color, depth);
-            }
-        }
-    }
-}
-/*
-pub struct SegmentedRenderBufferIter<'a, T> {
-    segments: &'a Vec<RenderBufferSegment>,
-    index: usize,
-    back_index: usize,
-    total_index: usize,
-    total_back_index: usize,
-    current_iter: BufferSegmentIter<'a, T>,
-    current_back_iter: BufferSegmentIter<'a, T>,
-    total_len: usize,
-    _marker: PhantomData<T>,
-}
-impl<'a> SegmentedRenderBufferIter<'a, Rgb> {
-    fn new(buffer: &SegmentedRenderBuffer) -> Self {
-        let count = buffer.segments.len();
-        let total_len = buffer.width().get() * buffer.height().get();
-
-        let current_iter = BufferSegmentIter::<'a, Rgb>::new(&buffer.segments[0]);
-        let current_back_iter = BufferSegmentIter::<'a, Rgb>::new(&buffer.segments[count - 1]);
-
-        Self {
-            segments: &buffer.segments,
-            index: 0,
-            back_index: count - 1,
-            total_index: 0,
-            total_back_index: total_len - 1,
-            current_iter,
-            current_back_iter,
-            total_len,
-            _marker: PhantomData,
-        }
-    }
-}
-impl<'a> SegmentedRenderBufferIter<'a, f32> {
-    fn new(buffer: &SegmentedRenderBuffer) -> Self {
-        let count = buffer.segments.len();
-        let total_len = buffer.width().get() * buffer.height().get();
-
-        let current_iter = BufferSegmentIter::<'a, f32>::new(&buffer.segments[0]);
-        let current_back_iter = BufferSegmentIter::<'a, f32>::new(&buffer.segments[count - 1]);
-
-        Self {
-            segments: &buffer.segments,
-            index: 0,
-            back_index: count - 1,
-            total_index: 0,
-            total_back_index: total_len - 1,
-            current_iter,
-            current_back_iter,
-            total_len,
-            _marker: PhantomData,
-        }
-    }
-}
-// impl<'a> SegmentedRenderBufferIter<'a, f32> {
-//     fn new(buffer: SingleRenderBuffer) -> Self {
-//         let len = buffer.width() * buffer.height();
-//         Self {
-//             buffer: &buffer.depth,
-//             index: 0,
-//             back_index: len - 1,
-//             len,
-//             _marker: PhantomData,
-//         }
-//     }
-// }
-
-impl<'a, T> Iterator for SegmentedRenderBufferIter<'a, T> {
-    type Item = (UVec2, T);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.total_index > self.total_back_index {
-            return None;
-        }
-
-        let value = match self.current_iter.next() {
-            Some(value) => value,
-            None => {
-                self.index += 1;
-                if self.index >= self.segments.len() {
-                    return None;
-                }
-
-                self.current_iter = self.segments[self.index];
-                if let Some(value) = self.current_iter.next() {
-                    value
-                } else {
-                    return None;
-                }
-            }
-        };
-
-        self.total_index += 1;
-
-        Some(value)
+    pub fn coords_exists(&self, coords: UVec2) -> bool {
+        (coords.x as usize) < self.size.x.get() && (coords.y as usize) < self.size.y.get()
     }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.total_len, Some(self.total_len))
+    fn coords_index(&self, coords: UVec2) -> usize {
+        (coords.y * coords.x + coords.x) as usize
     }
-}
-
-impl<'a, T> DoubleEndedIterator for SegmentedRenderBufferIter<'a, T> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        if self.total_index > self.total_back_index {
-            return None;
-        }
-
-        let value = match self.current_back_iter.next() {
-            Some(value) => value,
-            None => {
-                if self.back_index == 0 {
-                    return None;
-                }
-                self.back_index -= 1;
-
-                self.current_back_iter = self.segments[self.back_index];
-                if let Some(value) = self.current_back_iter.next() {
-                    value
-                } else {
-                    return None;
-                }
-            }
-        };
-
-        self.total_back_index.saturating_sub(1);
-
-        Some(value)
+    fn index_coords(&self, index: usize) -> UVec2 {
+        let x = (index % self.size.x.get()) as u32;
+        let y = (index / self.size.x.get()) as u32;
+        uvec2(x, y)
     }
-}
 
-impl<'a, T> BufferPixelIter<'a, T> for SegmentedRenderBufferIter<'a, T> {}
-
-pub struct SegmentedRenderBufferGridIter<'a, T>
-where
-    T: Copy,
-{
-    segments: &'a Vec<RenderBufferSegment>,
-    index: usize,
-    back_index: usize,
-    total_index: usize,
-    total_back_index: usize,
-    current_iter: SingleRenderBufferGridIter<'a, T>,
-    current_back_iter: SingleRenderBufferGridIter<'a, T>,
-    total_len: usize,
-    _marker: PhantomData<T>,
-}
-impl<'a, T> SegmentedRenderBufferGridIter<'a, T>
-where
-    T: Copy,
-{
-    fn new(buffer: SegmentedRenderBuffer) -> Self {
-        let count = buffer.segments.len();
-        let total_len = buffer.height().get();
-
-        let current_iter = SingleRenderBufferGridIter::<'a, T>::new(buffer.segments[0]);
-        let current_back_iter =
-            SingleRenderBufferGridIter::<'a, T>::new(buffer.segments[count - 1]);
-
-        Self {
-            segments: &buffer.segments,
-            index: 0,
-            back_index: count - 1,
-            total_index: 0,
-            total_back_index: total_len - 1,
-            current_iter,
-            current_back_iter,
-            total_len,
-            _marker: PhantomData,
-        }
+    pub fn size(&self) -> NonZeroUDimensions {
+        self.size
     }
-}
 
-impl<'a, T> BufferPixelGridIter<'a, T> for SegmentedRenderBufferGridIter<'a, T>
-where
-    T: Copy,
-{
-    type RowIter = std::slice::Iter<'a, T>;
-}
+    pub fn width(&self) -> NonZeroUsize {
+        self.size.x
+    }
+    pub fn height(&self) -> NonZeroUsize {
+        self.size.y
+    }
 
-impl<'a, T> Iterator for SegmentedRenderBufferGridIter<'a, T>
-where
-    T: Copy,
-{
-    type Item = <Self as BufferPixelGridIter<'a, T>>::RowIter;
-
-    // fn next(&mut self) -> Option<Self::Item> {
-    //     if self.index > self.back_index {
-    //         return None;
-    //     }
-
-    //     let iter = self.buffer[self.index].iter();
-
-    //     self.index += 1;
-
-    //     Some(iter)
+    // fn colors_grid(&self) -> Self::PixelGridIter<'_, Rgb> {
+    //     AnyIter::new(
+    //         self.color
+    //             .iter()
+    //             .map(|row| AnyIter::new(row.iter().cloned())),
+    //     )
     // }
 
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.total_index > self.total_back_index {
-            return None;
-        }
+    // fn depths_grid(&self) -> Self::PixelGridIter<'_, f32> {
+    //     AnyIter::new(
+    //         self.depth
+    //             .iter()
+    //             .map(|row| AnyIter::new(row.iter().cloned())),
+    //     )
+    // }
 
-        let value = match self.current_iter.next() {
-            Some(value) => value,
-            None => {
-                self.index += 1;
-                if self.index >= self.segments {
-                    return None;
-                }
-
-                self.current_iter = self.segments[self.index];
-                if let Some(value) = self.current_iter.next() {
-                    value
-                } else {
-                    return None;
-                }
-            }
-        };
-
-        self.total_index += 1;
-
-        Some(value)
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.total_len, Some(self.total_len))
-    }
-}
-
-impl<'a, T> DoubleEndedIterator for SegmentedRenderBufferGridIter<'a, T>
-where
-    T: Copy,
-{
-    fn next_back(&mut self) -> Option<Self::Item> {
-        if self.total_index > self.total_back_index {
-            return None;
-        }
-
-        let value = match self.current_back_iter.next() {
-            Some(value) => value,
-            None => {
-                if self.back_index == 0 {
-                    return None;
-                }
-                self.back_index -= 1;
-
-                self.current_back_iter = self.segments[self.back_index];
-                if let Some(value) = self.current_back_iter.next() {
-                    value
-                } else {
-                    return None;
-                }
-            }
-        };
-
-        self.total_back_index.saturating_sub(1);
-
-        Some(value)
-    }
-}
- */
-pub struct SegmentedRenderBuffer {
-    segments: Vec<RenderBufferSegment>,
-    segment_height: NonZeroUsize,
-    height: NonZeroUsize,
-}
-
-impl SegmentedRenderBuffer {
-    pub fn new(size: NonZeroUDimensions, segment_height: NonZeroUsize) -> Self {
-        let segments = RenderBufferSegment::create_segments(size, segment_height);
-
-        Self {
-            segments,
-            segment_height,
-            height: size.y,
-        }
-    }
-
-    pub fn segment_height(&self) -> NonZeroUsize {
-        self.segment_height
-    }
-
-    fn coords_segment_index(&self, coords: UVec2) -> usize {
-        coords.y as usize / self.segment_height.get()
-    }
-
-    pub fn coords_segment(&self, coords: UVec2) -> Option<&RenderBufferSegment> {
+    pub fn pixel_color(&self, coords: UVec2) -> Option<Rgb> {
         if !self.coords_exists(coords) {
             return None;
         }
 
-        Some(&self.segments[self.coords_segment_index(coords)])
+        Some(self.colors[self.coords_index(coords)])
     }
 
-    pub fn coords_segment_mut(&mut self, coords: UVec2) -> Option<&mut RenderBufferSegment> {
+    pub fn pixel_depth(&self, coords: UVec2) -> Option<f32> {
         if !self.coords_exists(coords) {
             return None;
         }
 
-        let index = self.coords_segment_index(coords);
-
-        Some(&mut self.segments[index])
+        Some(self.depths[self.coords_index(coords)])
     }
 
-    pub fn coords_to_segment_space(&self, mut coords: UVec2) -> UVec2 {
-        coords.y %= self.segment_height.get() as u32;
-
-        coords
-    }
-
-    pub fn iter(&self) -> std::slice::Iter<RenderBufferSegment> {
-        self.segments.iter()
-    }
-
-    pub fn iter_mut(&mut self) -> std::slice::IterMut<RenderBufferSegment> {
-        self.segments.iter_mut()
-    }
-}
-
-impl WholeRenderBuffer for SegmentedRenderBuffer {
-    fn width(&self) -> NonZeroUsize {
-        NonZeroUsize::new(self.segments[0].buffer.color[0].len())
-            .expect("color array has zero length")
-    }
-    fn height(&self) -> NonZeroUsize {
-        self.height
-    }
-}
-
-impl RenderBuffer for SegmentedRenderBuffer {
-    // type PixelIter<'a, T: 'a> = SegmentedRenderBufferIter<'a, T>;
-    // type PixelGridIter<'a, T: 'a> = SegmentedRenderBufferGridIter<'a, T>where
-    // T: Copy,;
-    type PixelIter<'a, T: 'a> = AnyIter<'a, (UVec2, T)>;
-    type PixelRowIter<'a, T: 'a> = AnyIter<'a, T>;
-    type PixelGridIter<'a, T: 'a> = AnyIter<'a, Self::PixelRowIter<'a, T>>;
-
-    fn colors(&self) -> Self::PixelIter<'_, Rgb> {
-        Self::PixelIter::new(self)
-    }
-    fn depths(&self) -> Self::PixelIter<'_, f32> {
-        Self::PixelIter::new(self)
-    }
-
-    fn colors_grid(&self) -> Self::PixelGridIter<'_, Rgb> {
-        Self::PixelGridIter::new(self)
-    }
-    fn depths_grid(&self) -> Self::PixelGridIter<'_, f32> {
-        Self::PixelGridIter::new(self)
-    }
-
-    fn pixel_color(&self, coords: UVec2) -> Option<Rgb> {
-        if !self.coords_exists(coords) {
-            return None;
-        }
-
-        let local_coords = self.coords_to_segment_space(coords);
-
-        Some(
-            self.coords_segment(coords)?.buffer.color[local_coords.y as usize]
-                [local_coords.x as usize],
-        )
-    }
-
-    fn pixel_depth(&self, coords: UVec2) -> Option<f32> {
-        if !self.coords_exists(coords) {
-            return None;
-        }
-
-        let local_coords = self.coords_to_segment_space(coords);
-
-        Some(
-            self.coords_segment(coords)?.buffer.depth[local_coords.y as usize]
-                [local_coords.x as usize],
-        )
-    }
-
-    fn set_pixel_color(&mut self, coords: UVec2, color: Rgb, depth: f32) -> Option<bool> {
-        if !self.coords_exists(coords) {
-            return None;
-        }
-
-        let current_depth = self.pixel_depth(coords).unwrap();
+    pub fn set_pixel_color(&mut self, coords: UVec2, color: Rgb, depth: f32) -> Option<bool> {
+        let current_depth = self.pixel_depth(coords)?;
 
         if current_depth < depth {
             return Some(false);
@@ -814,38 +106,31 @@ impl RenderBuffer for SegmentedRenderBuffer {
         Some(true)
     }
 
-    fn overwrite_pixel_color(&mut self, coords: UVec2, color: Rgb, depth: f32) -> Option<()> {
+    pub fn overwrite_pixel_color(&mut self, coords: UVec2, color: Rgb, depth: f32) -> Option<()> {
         if !self.coords_exists(coords) {
             return None;
         }
 
-        let local_coords = self.coords_to_segment_space(coords);
-        self.coords_segment_mut(coords)?.buffer.color[local_coords.y as usize]
-            [local_coords.x as usize] = color;
-        self.coords_segment_mut(coords)?.buffer.depth[local_coords.y as usize]
-            [local_coords.x as usize] = depth;
+        let index = self.coords_index(coords);
+
+        self.colors[index] = color;
+        self.depths[index] = depth;
 
         Some(())
     }
 
-    fn clear(&mut self) {
-        for segment in self.segments.iter_mut() {
-            for row in segment.buffer.color.iter_mut() {
-                for pixel in row.iter_mut() {
-                    *pixel = Rgb::default();
-                }
-            }
-            for row in segment.buffer.depth.iter_mut() {
-                for pixel in row.iter_mut() {
-                    *pixel = f32::MAX;
-                }
-            }
+    pub fn clear(&mut self) {
+        for pixel in self.colors.iter_mut() {
+            *pixel = Rgb::default();
+        }
+        for pixel in self.depths.iter_mut() {
+            *pixel = f32::MAX;
         }
     }
 
-    fn copy_region_from_other(
+    pub fn copy_region_from_other(
         &mut self,
-        from_buffer: &(impl RenderBuffer + WholeRenderBuffer),
+        from_buffer: &RenderBuffer,
         from_region: Region,
         to_pos: UVec2,
     ) {
@@ -862,213 +147,183 @@ impl RenderBuffer for SegmentedRenderBuffer {
             }
         }
     }
-}
 
-// pub fn draw_render_buffer(pixels: &mut Pixels, buffer: &RenderBuffer) {
-//     let size = pixels.context().texture_extent;
-//     let frame = pixels.get_frame_mut();
+    pub fn colors(&self) -> AnyIter<'_, (UVec2, Rgb)> {
+        AnyIter::new(
+            self.colors
+                .iter()
+                .enumerate()
+                .map(|(index, color)| (self.index_coords(index), *color)),
+        )
+    }
+    pub fn depths(&self) -> AnyIter<'_, (UVec2, f32)> {
+        AnyIter::new(
+            self.depths
+                .iter()
+                .enumerate()
+                .map(|(index, depth)| (self.index_coords(index), *depth)),
+        )
+    }
+    pub fn color_rows(&self) -> DoubleEndedAnyIter<'_, std::slice::Iter<Rgb>> {
+        DoubleEndedAnyIter::new((0..(self.size.y.get())).map(|i| {
+            let start = i * self.size.x.get();
+            let end = start + self.size.x.get();
 
-//     for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
-//         let x = (i % size.width as usize) as u32;
-//         let y = (i / size.width as usize) as u32;
+            self.colors[start..end].iter()
+        }))
+    }
+    pub fn depth_rows(&self) -> DoubleEndedAnyIter<'_, std::slice::Iter<f32>> {
+        DoubleEndedAnyIter::new((0..(self.size.y.get())).map(|i| {
+            let start = i * self.size.x.get();
+            let end = start + self.size.x.get();
 
-//         let color = match buffer.get_pixel_color(uvec2(x, y)) {
-//             Some(color) => color,
-//             None => Rgb::default(),
-//         }
-//         .to_byte()
-//         .to_rgba_slice(255);
+            self.depths[start..end].iter()
+        }))
+    }
 
-//         pixel.copy_from_slice(&color);
-//     }
-// }
+    pub fn divide_segments(
+        &mut self,
+        segment_heights: NonZeroUsize,
+    ) -> Vec<RenderBufferSegment<'_>> {
+        let mut segments = Vec::new();
 
-/* pub struct BufferSegmentIter<'a, T> {
-    iter: SingleRenderBufferIter<'a, T>,
-    y_offset: u32,
-}
+        let mut colors = self.colors.as_mut_slice();
+        let mut depths = self.depths.as_mut_slice();
 
-impl<'a> BufferSegmentIter<'a, Rgb> {
-    pub fn new(buffer: &RenderBufferSegment) -> Self {
-        Self {
-            iter: SingleRenderBufferIter::new(buffer),
-            y_offset: buffer.vertical_index * buffer.buffer.height(),
+        let segment_heights = segment_heights.get();
+        let height = self.size.y.get();
+        let width = self.size.x.get();
+
+        let mut i = 0_usize;
+        loop {
+            let own_height = if (i + 1) * segment_heights > height {
+                segment_heights
+            } else {
+                ((i + 1) * segment_heights) % height
+            };
+
+            let slice_len = own_height * width;
+
+            let (colors_slice, new_colors) = colors.split_at_mut(slice_len);
+            colors = new_colors;
+            let (depths_slice, new_depths) = depths.split_at_mut(slice_len);
+            depths = new_depths;
+
+            let segment = RenderBufferSegment {
+                colors: colors_slice,
+                depths: depths_slice,
+                vertical_index: i,
+                own_height,
+                segment_heights,
+                parent_size: self.size,
+            };
+
+            segments.push(segment);
+
+            if i * segment_heights >= height {
+                break;
+            }
+            i += 1;
         }
+
+        // colors.split_at_mut(mid)
+
+        segments
     }
 }
-impl<'a> BufferSegmentIter<'a, f32> {
-    pub fn new(buffer: &RenderBufferSegment) -> Self {
-        Self {
-            iter: SingleRenderBufferIter::new(buffer),
-            y_offset: buffer.vertical_index * buffer.buffer.height(),
-        }
-    }
-}
-
-impl<'a, T> Iterator for BufferSegmentIter<'a, T> {
-    type Item = (UVec2, T);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut value = self.iter.next();
-
-        value.0.y += self.y_offset;
-
-        return value;
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.iter.size_hint()
-    }
-}
-
-impl<'a, T> DoubleEndedIterator for BufferSegmentIter<'a, T> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        let mut value = self.iter.next_back();
-        value.0.y += self.y_offset;
-
-        return value;
-    }
-}
- */
 
 /// Represents a vertical segment of a larger RenderBuffer.
 ///
 /// This is used when dividing up rendering to multiple threads.
-pub struct RenderBufferSegment {
-    pub buffer: SingleRenderBuffer,
-    pub vertical_index: usize,
-    pub pos_y: usize,
-    pub parent_size: NonZeroUDimensions,
+pub struct RenderBufferSegment<'a> {
+    colors: &'a mut [Rgb],
+    depths: &'a mut [f32],
+    vertical_index: usize,
+    own_height: usize,
+    segment_heights: usize,
+    parent_size: NonZeroUDimensions,
 }
 
-impl RenderBufferSegment {
-    pub fn create_segments(
-        buffer_size: NonZeroUDimensions,
-        segment_max_height: NonZeroUsize,
-    ) -> Vec<Self> {
-        let mut buffers = Vec::new();
+impl<'a> RenderBufferSegment<'a> {
+    pub fn position(&self) -> UVec2 {
+        let y = self.vertical_index * self.segment_heights;
+        uvec2(0, y as u32)
+    }
 
-        if buffer_size.y.get() <= segment_max_height.get() {
-            buffers.push(RenderBufferSegment {
-                buffer: SingleRenderBuffer::new(buffer_size),
-                vertical_index: 0,
-                pos_y: 0,
-                parent_size: buffer_size,
-            });
+    pub fn size(&self) -> UDimensions {
+        udimensions(self.parent_size.x.get(), self.own_height)
+    }
 
-            return buffers;
+    pub fn parent_size(&self) -> UDimensions {
+        self.parent_size.get()
+    }
+
+    pub fn region(&self) -> Region {
+        Region {
+            pos: self.position(),
+            size: self.size(),
+        }
+    }
+
+    pub fn coords_inside(&self, coords: UVec2) -> bool {
+        self.region().includes_point(coords)
+    }
+
+    fn coords_index(&self, coords: UVec2) -> Option<usize> {
+        if !self.coords_inside(coords) {
+            return None;
+        }
+        let pos = self.position();
+
+        Some(((coords.y - pos.y) * coords.x + coords.x) as usize)
+    }
+
+    pub fn pixel_color(&self, coords: UVec2) -> Option<Rgb> {
+        let Some(index) = self.coords_index(coords) else {
+            return None;
+        };
+
+        Some(self.colors[index])
+    }
+
+    pub fn pixel_depth(&self, coords: UVec2) -> Option<f32> {
+        let Some(index) = self.coords_index(coords) else {
+            return None;
+        };
+
+        Some(self.depths[index])
+    }
+
+    pub fn overwrite_pixel(&mut self, coords: UVec2, color: Rgb, depth: f32) -> Option<()> {
+        let Some(index) = self.coords_index(coords) else {
+            return None;
+        };
+
+        self.colors[index] = color;
+        self.depths[index] = depth;
+
+        Some(())
+    }
+
+    pub fn set_pixel(&mut self, coords: UVec2, color: Rgb, depth: f32) -> Option<bool> {
+        let current_depth = self.pixel_depth(coords)?;
+
+        if current_depth < depth {
+            return Some(false);
         }
 
-        let mut count_y = buffer_size.y.get() / segment_max_height.get();
-        if buffer_size.y.get() % segment_max_height.get() != 0 {
-            count_y += 1;
-        }
+        self.overwrite_pixel(coords, color, depth)?;
 
-        for y in 0..count_y {
-            let mut frag_size = NonZeroUDimensions::new(buffer_size.x, segment_max_height);
-            if (y + 1) * segment_max_height.get() > buffer_size.y.get() {
-                frag_size.y =
-                    NonZeroUsize::new(buffer_size.y.get() - (y + 1) * segment_max_height.get())
-                        .expect("got zero height render buffer segment");
-            }
-
-            let frag_buffer = SingleRenderBuffer::new(frag_size);
-
-            buffers.push(RenderBufferSegment {
-                buffer: frag_buffer,
-                vertical_index: y,
-                pos_y: segment_max_height * y,
-                parent_size: buffer_size,
-            })
-        }
-
-        buffers
-    }
-
-    pub fn coords_within_bounds(&self, coords: UVec2) -> bool {
-        let height = self.buffer.height().get();
-        (coords.x as usize) < self.buffer.width().get()
-            && (coords.y as usize) >= self.pos_y
-            && (coords.y as usize) < (self.pos_y - height)
-    }
-
-    pub fn coords_to_segment_space(&self, mut coords: UVec2) -> UVec2 {
-        coords.y %= self.buffer.height().get() as u32;
-
-        coords
-    }
-}
-
-impl RenderBuffer for RenderBufferSegment {
-    // type PixelIter<'a, T: 'a> = SingleRenderBufferIter<'a, T>;
-    // type PixelGridIter<'a, T: 'a> = SingleRenderBufferGridIter<'a, T>where
-    // T: Copy,;
-    type PixelIter<'a, T: 'a> = AnyIter<'a, (UVec2, T)>;
-    type PixelRowIter<'a, T: 'a> = AnyIter<'a, T>;
-    type PixelGridIter<'a, T: 'a> = AnyIter<'a, Self::PixelRowIter<'a, T>>;
-
-    fn colors(&self) -> Self::PixelIter<'_, Rgb> {
-        AnyIter::new(
-            self.buffer
-                .colors()
-                .map(|value| (value.0 + uvec2(0, self.vertical_index),)),
-        )
-    }
-    fn depths(&self) -> Self::PixelIter<'_, f32> {
-        self.buffer.depths()
-    }
-
-    fn colors_grid(&self) -> Self::PixelGridIter<'_, Rgb> {
-        self.buffer.colors_grid()
-    }
-    fn depths_grid(&self) -> Self::PixelGridIter<'_, f32> {
-        self.buffer.depths_grid()
-    }
-
-    fn pixel_color(&self, coords: UVec2) -> Option<Rgb> {
-        self.buffer
-            .pixel_color(self.coords_to_segment_space(coords))
-    }
-
-    fn pixel_depth(&self, coords: UVec2) -> Option<f32> {
-        self.buffer
-            .pixel_depth(self.coords_to_segment_space(coords))
-    }
-
-    fn set_pixel_color(&mut self, coords: UVec2, color: Rgb, depth: f32) -> Option<bool> {
-        self.buffer
-            .set_pixel_color(self.coords_to_segment_space(coords), color, depth)
-    }
-
-    fn overwrite_pixel_color(&mut self, coords: UVec2, color: Rgb, depth: f32) -> Option<()> {
-        self.buffer
-            .overwrite_pixel_color(self.coords_to_segment_space(coords), color, depth)
-    }
-
-    fn clear(&mut self) {
-        self.buffer.clear();
-    }
-
-    fn copy_region_from_other(
-        &mut self,
-        from_buffer: &(impl RenderBuffer + WholeRenderBuffer),
-        from_region: Region,
-        to_pos: UVec2,
-    ) {
-        self.buffer.copy_region_from_other(
-            from_buffer,
-            from_region,
-            self.coords_to_segment_space(to_pos),
-        );
+        Some(true)
     }
 }
 
 pub trait RenderBufferDrawable {
-    fn draw_render_buffer(&mut self, render_buffer: &impl RenderBuffer);
+    fn draw_render_buffer(&mut self, render_buffer: &RenderBuffer);
 }
 
 impl RenderBufferDrawable for Pixels {
-    fn draw_render_buffer(&mut self, render_buffer: &impl RenderBuffer) {
+    fn draw_render_buffer(&mut self, render_buffer: &RenderBuffer) {
         let size = self.context().texture_extent;
         let frame = self.get_frame_mut();
 

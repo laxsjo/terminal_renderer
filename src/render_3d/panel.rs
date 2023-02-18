@@ -1,4 +1,4 @@
-use crate::input;
+use crate::{input, utils::IterUtils};
 
 use super::*;
 
@@ -17,7 +17,7 @@ impl ScenePanel {
         let (mut width, height) = crossterm::terminal::size().expect("couldn't get terminal size");
         width /= 2;
 
-        let renderer = Renderer::new(width as usize, height as usize);
+        let renderer = Renderer::new(width as usize, height as usize, 500);
 
         Self {
             scene,
@@ -72,8 +72,9 @@ impl ui::Panel for ScenePanel {
 
         let mut text_buffer = ui::RenderBuffer::new();
 
-        for row in pixel_buffer.color.iter().rev() {
-            let run_length_colors = row.run_length_encoding();
+        // TODO: Fix me!!!!!! (it's fixed now)
+        for row in pixel_buffer.color_rows().rev() {
+            let run_length_colors = row.run_length_encoded();
             for (color, length) in run_length_colors {
                 let color = color.to_byte();
 

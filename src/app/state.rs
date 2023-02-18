@@ -72,6 +72,7 @@ impl StateMachine {
         scene: Scene,
         window_builder: WindowBuilder,
         render_height: u32,
+        screen_segment_height: usize,
     ) -> Result<Self, StateMachineError> {
         let event_loop = EventLoop::new();
         let window = window_builder.build(&event_loop)?;
@@ -95,9 +96,12 @@ impl StateMachine {
             })
             .build()?;
 
+        // TODO: Fix me!!!!!!
+        // let renderer = todo!();
         let renderer = Renderer::new(
             buffer_size.width.max(1) as usize,
             buffer_size.height.max(1) as usize,
+            screen_segment_height,
         );
 
         let timer = DeltaTimer::new();
