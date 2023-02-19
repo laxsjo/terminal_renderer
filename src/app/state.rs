@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::{render_3d::*, utils::DeltaTimer};
+use crate::{render_3d::*, update_moving_average, utils::DeltaTimer};
 use pixels::{wgpu, Pixels, PixelsBuilder, SurfaceTexture};
 use winit::{
     dpi::PhysicalSize,
@@ -72,7 +72,7 @@ impl StateMachine {
         scene: Scene,
         window_builder: WindowBuilder,
         render_height: u32,
-        screen_segment_height: usize,
+        thread_count: usize,
     ) -> Result<Self, StateMachineError> {
         let event_loop = EventLoop::new();
         let window = window_builder.build(&event_loop)?;
@@ -101,7 +101,7 @@ impl StateMachine {
         let renderer = Renderer::new(
             buffer_size.width.max(1) as usize,
             buffer_size.height.max(1) as usize,
-            screen_segment_height,
+            thread_count,
         );
 
         let timer = DeltaTimer::new();
@@ -149,13 +149,17 @@ impl StateMachine {
                     self.state.time += delta_time;
                     self.state.delta_time = delta_time;
 
-                    let mut timer = DeltaTimer::new();
-                    self.renderer.clear();
-                    self.renderer.render_scene(&self.state.scene);
-                    let scene_time = timer.delta_time();
+                    let frame_time = update_moving_average!(delta_time.as_millis() as f64);
 
-                    self.pixels.draw_render_buffer(self.renderer.buffer());
-                    let render_buffer_time = timer.delta_time();
+                    let mut timer = DeltaTimer::new();
+                    // self.renderer.clear();
+                    let clear_time = update_moving_average!(timer.delta_time().as_millis() as f64);
+                    self.renderer.render_scene_multi_thread(&self.state.scene);
+                    let scene_time = update_moving_average!(timer.delta_time().as_millis() as f64);
+
+                    self.pixels.draw_render_buffer(self.renderer.buffer(), self.renderer.segment_heights());
+                    let render_buffer_time =
+                        update_moving_average!(timer.delta_time().as_millis() as f64);
 
                     timer.restart();
                     if let Err(err) = self.pixels.render() {
@@ -163,13 +167,11 @@ impl StateMachine {
                         *control_flow = ControlFlow::Exit;
                         return;
                     }
-                    let pixels_time = timer.delta_time();
+                    let pixels_time = update_moving_average!(timer.delta_time().as_millis() as f64);
 
                     println!(
-                        "scene render: {} ms, copy buffer: {} ms, pixels render: {} ms",
-                        scene_time.as_millis(),
-                        render_buffer_time.as_millis(),
-                        pixels_time.as_millis()
+                        "clear render: {:.2} ms, scene render: {:.2} ms, copy buffer: {:.2} ms, pixels render: {:.2} ms, total frame: {:.2} ms",
+                        clear_time, scene_time, render_buffer_time, pixels_time, frame_time,
                     );
                 }
                 Event::WindowEvent {

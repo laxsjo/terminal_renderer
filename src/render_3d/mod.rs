@@ -295,6 +295,12 @@ pub struct UDimensions {
     pub y: usize,
 }
 
+impl UDimensions {
+    pub fn as_vec(self) -> UVec2 {
+        uvec2(self.x as u32, self.y as u32)
+    }
+}
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Hash)]
 pub struct NonZeroUDimensions {
     pub x: NonZeroUsize,

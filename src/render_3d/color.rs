@@ -136,6 +136,12 @@ where
     }
 }
 
+impl From<Rgb> for Vec3 {
+    fn from(value: Rgb) -> Self {
+        vec3(value.r, value.g, value.b)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct ByteRgb {
     pub r: u8,

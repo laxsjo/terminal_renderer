@@ -1,9 +1,12 @@
+use crate::math;
 use crate::utils::DoubleEndedAnyIter;
 
 use super::*;
 // use crate::math::*;
 use pixels::Pixels;
+use std::marker::PhantomData;
 use std::num::NonZeroUsize;
+use std::thread;
 
 #[derive(Clone, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Region {
@@ -17,8 +20,36 @@ impl Region {
     }
 
     pub fn includes_point(&self, pos: UVec2) -> bool {
-        ((self.pos.x)..(self.pos.x + self.size.x as u32)).contains(&pos.x)
-            && ((self.pos.y)..(self.pos.y + self.size.y as u32)).contains(&pos.y)
+        self.pos.x <= pos.x
+            && pos.x < self.pos.x + self.size.x as u32
+            && self.pos.y <= pos.y
+            && pos.y < self.pos.y + self.size.y as u32
+    }
+
+    pub fn line_intersects(&self, line: ULine) -> bool {
+        let corners = (self.pos, self.pos + self.size.as_vec());
+        !matches!(
+            math::frame_intersection(line.into(), (corners.0.into(), corners.1.into())),
+            FrameIntersection::None
+        )
+    }
+
+    pub fn triangle_outside(&self, triangle: (UVec2, UVec2, UVec2)) -> bool {
+        if self.includes_point(triangle.0)
+            || self.includes_point(triangle.1)
+            || self.includes_point(triangle.2)
+        {
+            return false;
+        }
+
+        if self.line_intersects(ULine(triangle.0, triangle.1))
+            || self.line_intersects(ULine(triangle.1, triangle.2))
+            || self.line_intersects(ULine(triangle.0, triangle.2))
+        {
+            return false;
+        }
+
+        true
     }
 }
 
@@ -36,6 +67,15 @@ impl RenderBuffer {
             depths: vec![f32::MAX; len],
             size,
         }
+    }
+
+    pub fn normalized_to_buffer_space(&self, point: Vec2) -> UVec2 {
+        let UDimensions { x, y } = self.size().get();
+        Vec2 {
+            x: (point.x * x as f32 + point.x) / 2.,
+            y: (point.y * y as f32 + point.y) / 2.,
+        }
+        .into()
     }
 
     pub fn coords_exists(&self, coords: UVec2) -> bool {
@@ -60,6 +100,11 @@ impl RenderBuffer {
     }
     pub fn height(&self) -> NonZeroUsize {
         self.size.y
+    }
+
+    pub fn aspect_ratio(&self) -> f32 {
+        let size = self.size().get();
+        aspect_ratio(vec2(size.x as f32, size.y as f32))
     }
 
     // fn colors_grid(&self) -> Self::PixelGridIter<'_, Rgb> {
@@ -181,10 +226,59 @@ impl RenderBuffer {
         }))
     }
 
-    pub fn divide_segments(
+    pub fn separate_into_segments(
+        &self,
+        segment_heights: NonZeroUsize,
+    ) -> Vec<RenderBufferSegment<'_, &'_ [Rgb], &'_ [f32]>> {
+        let mut segments = Vec::new();
+
+        let mut colors = self.colors.as_slice();
+        let mut depths = self.depths.as_slice();
+
+        let segment_heights = segment_heights.get();
+        let height = self.size.y.get();
+        let width = self.size.x.get();
+        let rest_height = height % segment_heights;
+
+        let mut count = height / segment_heights;
+        if rest_height != 0 {
+            count += 1;
+        }
+
+        for i in 0..count {
+            let own_height = if (i + 1) * segment_heights <= height {
+                segment_heights
+            } else {
+                rest_height
+            };
+
+            let slice_len = own_height * width;
+
+            let (colors_slice, new_colors) = colors.split_at(slice_len);
+            colors = new_colors;
+            let (depths_slice, new_depths) = depths.split_at(slice_len);
+            depths = new_depths;
+
+            let segment = RenderBufferSegment {
+                colors: colors_slice,
+                depths: depths_slice,
+                vertical_index: i,
+                own_height,
+                segment_heights,
+                parent_size: self.size,
+                _lifetime: PhantomData,
+            };
+
+            segments.push(segment);
+        }
+
+        segments
+    }
+
+    pub fn separate_into_segments_mut(
         &mut self,
         segment_heights: NonZeroUsize,
-    ) -> Vec<RenderBufferSegment<'_>> {
+    ) -> Vec<RenderBufferSegment<'_, &'_ mut [Rgb], &'_ mut [f32]>> {
         let mut segments = Vec::new();
 
         let mut colors = self.colors.as_mut_slice();
@@ -193,13 +287,18 @@ impl RenderBuffer {
         let segment_heights = segment_heights.get();
         let height = self.size.y.get();
         let width = self.size.x.get();
+        let rest_height = height % segment_heights;
 
-        let mut i = 0_usize;
-        loop {
-            let own_height = if (i + 1) * segment_heights > height {
+        let mut count = height / segment_heights;
+        if rest_height != 0 {
+            count += 1;
+        }
+
+        for i in 0..count {
+            let own_height = if (i + 1) * segment_heights <= height {
                 segment_heights
             } else {
-                ((i + 1) * segment_heights) % height
+                rest_height
             };
 
             let slice_len = own_height * width;
@@ -216,35 +315,86 @@ impl RenderBuffer {
                 own_height,
                 segment_heights,
                 parent_size: self.size,
+                _lifetime: PhantomData,
             };
 
             segments.push(segment);
-
-            if i * segment_heights >= height {
-                break;
-            }
-            i += 1;
         }
-
-        // colors.split_at_mut(mid)
 
         segments
     }
+
+    pub fn as_single_segment(&mut self) -> RenderBufferSegment<'_, &'_ [Rgb], &'_ [f32]> {
+        let colors = self.colors.as_slice();
+        let depths = self.depths.as_slice();
+        let height = self.size.y.get();
+
+        RenderBufferSegment {
+            colors,
+            depths,
+            vertical_index: 0,
+            own_height: height,
+            segment_heights: height,
+            parent_size: self.size,
+            _lifetime: PhantomData,
+        }
+    }
+    pub fn as_single_segment_mut(
+        &mut self,
+    ) -> RenderBufferSegment<'_, &'_ mut [Rgb], &'_ mut [f32]> {
+        let colors = self.colors.as_mut_slice();
+        let depths = self.depths.as_mut_slice();
+        let height = self.size.y.get();
+
+        RenderBufferSegment {
+            colors,
+            depths,
+            vertical_index: 0,
+            own_height: height,
+            segment_heights: height,
+            parent_size: self.size,
+            _lifetime: PhantomData,
+        }
+    }
 }
 
-/// Represents a vertical segment of a larger RenderBuffer.
+pub type RenderBufferSegmentRead<'a> = RenderBufferSegment<'a, &'a [Rgb], &'a [f32]>;
+pub type RenderBufferSegmentMut<'a> = RenderBufferSegment<'a, &'a mut [Rgb], &'a mut [f32]>;
+
+/// Represents a vertical segment of a larger RenderBuffer that can be edited.
 ///
 /// This is used when dividing up rendering to multiple threads.
-pub struct RenderBufferSegment<'a> {
-    colors: &'a mut [Rgb],
-    depths: &'a mut [f32],
+pub struct RenderBufferSegment<'a, C, D>
+where
+    C: 'a,
+    D: 'a,
+{
+    colors: C,
+    depths: D,
     vertical_index: usize,
     own_height: usize,
     segment_heights: usize,
     parent_size: NonZeroUDimensions,
+    _lifetime: PhantomData<&'a ()>,
 }
 
-impl<'a> RenderBufferSegment<'a> {
+impl<'a, C, D> RenderBufferSegment<'a, C, D>
+where
+    C: 'a,
+    D: 'a,
+{
+    pub fn normalized_to_buffer_space(&self, point: Vec2) -> UVec2 {
+        let UDimensions {
+            x: width,
+            y: height,
+        } = self.parent_size();
+        Vec2 {
+            x: (width as f32 * (point.x + 1.)) / 2.,
+            y: (height as f32 * (point.y + 1.)) / 2.,
+        }
+        .into()
+    }
+
     pub fn position(&self) -> UVec2 {
         let y = self.vertical_index * self.segment_heights;
         uvec2(0, y as u32)
@@ -256,6 +406,11 @@ impl<'a> RenderBufferSegment<'a> {
 
     pub fn parent_size(&self) -> UDimensions {
         self.parent_size.get()
+    }
+
+    pub fn parent_aspect_ratio(&self) -> f32 {
+        let size = self.parent_size();
+        aspect_ratio(vec2(size.x as f32, size.y as f32))
     }
 
     pub fn region(&self) -> Region {
@@ -275,9 +430,11 @@ impl<'a> RenderBufferSegment<'a> {
         }
         let pos = self.position();
 
-        Some(((coords.y - pos.y) * coords.x + coords.x) as usize)
+        Some(((coords.y - pos.y) * self.parent_size.x.get() as u32 + coords.x) as usize)
     }
+}
 
+impl<'a> RenderBufferSegmentRead<'a> {
     pub fn pixel_color(&self, coords: UVec2) -> Option<Rgb> {
         let Some(index) = self.coords_index(coords) else {
             return None;
@@ -292,6 +449,40 @@ impl<'a> RenderBufferSegment<'a> {
         };
 
         Some(self.depths[index])
+    }
+
+    pub fn colors(&self) -> &[Rgb] {
+        self.colors
+    }
+
+    pub fn depths(&self) -> &[f32] {
+        self.depths
+    }
+}
+
+impl<'a> RenderBufferSegmentMut<'a> {
+    pub fn pixel_color(&self, coords: UVec2) -> Option<Rgb> {
+        let Some(index) = self.coords_index(coords) else {
+            return None;
+        };
+
+        Some(self.colors[index])
+    }
+
+    pub fn pixel_depth(&self, coords: UVec2) -> Option<f32> {
+        let Some(index) = self.coords_index(coords) else {
+            return None;
+        };
+
+        Some(self.depths[index])
+    }
+
+    pub fn colors(&self) -> &[Rgb] {
+        self.colors
+    }
+
+    pub fn depths(&self) -> &[f32] {
+        self.depths
     }
 
     pub fn overwrite_pixel(&mut self, coords: UVec2, color: Rgb, depth: f32) -> Option<()> {
@@ -316,30 +507,61 @@ impl<'a> RenderBufferSegment<'a> {
 
         Some(true)
     }
+
+    pub fn clear(&mut self) {
+        for pixel in self.colors.iter_mut() {
+            *pixel = Rgb::default();
+        }
+        for pixel in self.depths.iter_mut() {
+            *pixel = f32::MAX;
+        }
+    }
 }
 
 pub trait RenderBufferDrawable {
-    fn draw_render_buffer(&mut self, render_buffer: &RenderBuffer);
+    fn draw_render_buffer(&mut self, render_buffer: &RenderBuffer, segment_heights: NonZeroUsize);
 }
 
 impl RenderBufferDrawable for Pixels {
-    fn draw_render_buffer(&mut self, render_buffer: &RenderBuffer) {
-        let size = self.context().texture_extent;
-        let frame = self.get_frame_mut();
+    fn draw_render_buffer(&mut self, render_buffer: &RenderBuffer, segment_heights: NonZeroUsize) {
+        let frame_size = self.context().texture_extent;
+        let mut frame = self.get_frame_mut();
 
-        for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
-            let x = (i % size.width as usize) as u32;
-            let y = (i / size.width as usize) as u32;
+        let segments = render_buffer.separate_into_segments(segment_heights);
 
-            let color = match render_buffer.pixel_color(uvec2(x, y)) {
-                Some(color) => color.to_rgba(1.),
-                None => rgba(0., 0., 0., 0.),
+        // let frame_segments_pixel_count = segments[0].colors.len() * 4;
+        // let frame_segments_height = frame_segments_pixel_count as u32 / (frame_size.width * 4);
+        let segments_height = segments[0].own_height;
+
+        thread::scope(|scope| {
+            let mut handles = Vec::new();
+            for (i, segment) in segments.into_iter().enumerate() {
+                let this_frame_segment_pixel_count = segment.own_height * frame_size.width as usize;
+                let (segment_frame, new_frame) =
+                    frame.split_at_mut(this_frame_segment_pixel_count * 4);
+                frame = new_frame;
+
+                handles.push(scope.spawn(move || {
+                    for (j, pixel) in segment_frame.chunks_exact_mut(4).enumerate() {
+                        let x = (j % frame_size.width as usize) as u32;
+                        let y = ((j / frame_size.width as usize) + (segments_height * i)) as u32;
+
+                        let color = match segment.pixel_color(uvec2(x, y)) {
+                            Some(color) => color.to_rgba(1.),
+                            None => rgba(0., 0., 0., 0.),
+                        }
+                        .to_byte()
+                        .to_slice();
+
+                        pixel.copy_from_slice(&color);
+                    }
+                }));
             }
-            .to_byte()
-            .to_slice();
 
-            pixel.copy_from_slice(&color);
-        }
+            for handle in handles {
+                handle.join().unwrap();
+            }
+        })
     }
 }
 
@@ -355,5 +577,22 @@ mod tests {
         let coords = uvec2(6, 2);
 
         assert_eq!(buffer.coords_index(coords), 26);
+    }
+
+    #[test]
+    fn region_includes_point() {
+        use super::*;
+        // use crate::math::*;
+        // use crate::render_3d::{non_zero_udimensions, RenderBuffer};
+
+        let region = Region {
+            pos: uvec2(3, 2),
+            size: udimensions(6, 5),
+        };
+
+        assert!(!region.includes_point(uvec2(1, 1)));
+        assert!(region.includes_point(uvec2(5, 3)));
+        assert!(!region.includes_point(uvec2(11, 3)));
+        assert!(!region.includes_point(uvec2(5, 10)));
     }
 }

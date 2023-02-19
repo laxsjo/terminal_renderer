@@ -442,6 +442,18 @@ where
     }
 }
 
+impl Display for UVec2 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_char('(')?;
+
+        std::fmt::Display::fmt(&self.x, f)?;
+        f.write_str(", ")?;
+        std::fmt::Display::fmt(&self.y, f)?;
+
+        f.write_char(')')
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Hash)]
 pub struct IVec2 {
     pub x: i32,
@@ -507,6 +519,18 @@ where
 {
     fn from(tuple: (T, T)) -> Self {
         ivec2(tuple.0.into(), tuple.1.into())
+    }
+}
+
+impl Display for IVec2 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_char('(')?;
+
+        std::fmt::Display::fmt(&self.x, f)?;
+        f.write_str(", ")?;
+        std::fmt::Display::fmt(&self.y, f)?;
+
+        f.write_char(')')
     }
 }
 

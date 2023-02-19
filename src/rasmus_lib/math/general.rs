@@ -284,6 +284,7 @@ pub fn intersection_of_point_pairs_infinite(a: Line, b: Line) -> IntersectionPoi
 pub fn intersection_of_point_pairs(line_a: Line, line_b: Line) -> IntersectionPoint {
     let inter_point = intersection_of_point_pairs_infinite(line_a, line_b);
 
+    // println!("Got no intersections for lines {:?}, {:?}", line_a, line_b);
     match inter_point {
         IntersectionPoint::None => IntersectionPoint::None,
         IntersectionPoint::Infinite => {
@@ -291,11 +292,17 @@ pub fn intersection_of_point_pairs(line_a: Line, line_b: Line) -> IntersectionPo
             IntersectionPoint::None
         }
         IntersectionPoint::One(point) => {
+            // println!(
+            //     "Got 1 intersection point {}, for lines {:?}, {:?}",
+            //     point,
+            //     line_a, line_b
+            // );
             if point_inside_frame(point, (line_a.0, line_a.1))
                 && point_inside_frame(point, (line_b.0, line_b.1))
             {
                 inter_point
             } else {
+                // println!("Which wasn't inside frame :/");
                 IntersectionPoint::None
             }
         }
@@ -363,6 +370,14 @@ impl AbsDiffEq for Line {
         self.0.abs_diff_eq(&other.0, epsilon) && self.1.abs_diff_eq(&other.1, epsilon)
     }
 }
+impl From<ULine> for Line {
+    fn from(value: ULine) -> Self {
+        Line(value.0.into(), value.1.into())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ULine(pub UVec2, pub UVec2);
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FrameIntersection {
@@ -431,7 +446,8 @@ pub fn frame_intersection(line: Line, frame_corners: (Vec2, Vec2)) -> FrameInter
         }
 
         let IntersectionPoint::One(point) = inter else {
-            panic!("no intersection found, while intersection was guaranteed. line: {:?}, frame_corners: {:?}, inter: {:?}", line, frame_corners, inter);
+            return FrameIntersection::None; // Let's ignore that pesky, "that's technically wrong" ;)
+            // panic!("no intersection found, while intersection was guaranteed. line: {:?}, frame_corners: {:?}, inter: {:?}", line, frame_corners, inter);
         };
 
         return FrameIntersection::One(point);

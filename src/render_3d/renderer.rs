@@ -2,9 +2,11 @@ use super::*;
 use crate::math;
 use shader::*;
 use std::fmt::Debug;
+use std::thread;
 
 pub struct Renderer {
     buffer: RenderBuffer,
+    pub thread_count: NonZeroUsize,
 }
 
 pub struct RenderVertex {
@@ -20,16 +22,20 @@ pub struct SceneInfo {
 }
 
 impl Renderer {
-    pub fn new(width: usize, height: usize, _segment_height: usize) -> Self {
+    pub fn new(width: usize, height: usize, thread_count: usize) -> Self {
         println!("Created renderer of size {}x{}", width, height);
         let buffer = RenderBuffer::new(
             non_zero_udimensions(width, height).unwrap(),
             // NonZeroUsize::new(segment_height).unwrap(),
         );
-        Renderer { buffer }
+        Renderer {
+            buffer,
+            thread_count: NonZeroUsize::new(thread_count).unwrap(),
+        }
     }
 
     fn normalized_to_buffer_space(&self, point: Vec2) -> UVec2 {
+        // this is wrong I think /rasmus@Feb2023
         let (width, height) = self.size();
         Vec2 {
             x: (point.x * width as f32 + point.x) / 2.,
@@ -49,6 +55,11 @@ impl Renderer {
 
     pub fn buffer(&self) -> &RenderBuffer {
         &self.buffer
+    }
+
+    pub fn segment_heights(&self) -> NonZeroUsize {
+        NonZeroUsize::new(self.buffer.height().get() / self.thread_count.get())
+            .expect("non zero division inputs resulted zero value")
     }
 
     pub fn update_size(&mut self) {
@@ -139,26 +150,41 @@ impl Renderer {
 
     // TODO: Actually use the segmented render buffer
     pub fn draw_triangle(
-        &mut self,
+        buffer: &mut RenderBufferSegmentMut,
         points: (RenderVertex, RenderVertex, RenderVertex),
         shader: &ShaderProgram<'_, SceneInfo>,
     ) {
-        // const RENDER_FRAME: (Vec2, Vec2) = (vec2(-1., -1.), vec2(1., 1.));
+        let triangle = (
+            buffer.normalized_to_buffer_space(points.0.pos),
+            buffer.normalized_to_buffer_space(points.1.pos),
+            buffer.normalized_to_buffer_space(points.2.pos),
+        );
+        if buffer.region().triangle_outside(triangle) {
+            // if !buffer.region().includes_point(triangle.0) {
+            // println!(
+            //     "region {:?} didn't include point {}, screen coordinates {}",
+            //     buffer.region(),
+            //     triangle.0,
+            //     points.0.pos
+            // );
+            // points.0.vertex_color = rgb(1., 0., 0.);
+            // points.1.vertex_color = rgb(1., 0., 0.);
+            // points.2.vertex_color = rgb(1., 0., 0.);
+            return;
+        }
 
-        let drawer = UglyTriangleDrawer::new(self.buffer.size().get());
-
-        // if points.0.depth.is_nan() || points.1.depth.is_nan() || points.2.depth.is_nan() {
-        //     panic!("{}, {}, {}", points.0.depth, points.1.depth, points.2.depth,)
-        // }
+        let drawer = UglyTriangleDrawer::new(buffer.parent_size());
 
         drawer.draw(
             TriangleDrawParams {
                 vertices: (points.0, points.1, points.2),
             },
-            |coords, data| {
+            move |coords, data| {
                 let (color, depth) = shader.shade_pixel(data);
 
-                self.set_pixel(coords, color, depth);
+                buffer.set_pixel(coords, color, depth);
+
+                // self.set_pixel(coords, color, depth);
             },
         )
     }
@@ -176,7 +202,7 @@ impl Renderer {
     }
 
     pub fn render_object(
-        &mut self,
+        buffer: &mut RenderBufferSegmentMut,
         object: &Object,
         shader: &ShaderProgram<SceneInfo>,
         camera: &impl Camera,
@@ -211,7 +237,7 @@ impl Renderer {
                 }
             });
 
-            let aspect_ratio = self.aspect_ratio();
+            let aspect_ratio = buffer.parent_aspect_ratio();
 
             let projected_a = camera.project_point(tri.points.0, aspect_ratio);
             let projected_b = camera.project_point(tri.points.1, aspect_ratio);
@@ -224,7 +250,8 @@ impl Renderer {
                 continue;
             }
 
-            self.draw_triangle(
+            Self::draw_triangle(
+                buffer,
                 (
                     RenderVertex {
                         pos: projected_a.xy(),
@@ -254,10 +281,39 @@ impl Renderer {
     }
 
     pub fn render_scene(&mut self, scene: &Scene) {
+        let segment = self.buffer.as_single_segment_mut();
+
+        Self::render_scene_segment(segment, scene);
+    }
+
+    pub fn render_scene_multi_thread(&mut self, scene: &Scene) {
+        let segments = self
+            .buffer
+            .separate_into_segments_mut(self.segment_heights());
+        // println!("Separated into {} segments", segments.len());
+
+        thread::scope(|scope| {
+            let mut handles = Vec::new();
+
+            for segment in segments {
+                handles.push(scope.spawn(move || {
+                    Renderer::render_scene_segment(segment, scene);
+                }));
+            }
+
+            for handle in handles {
+                handle.join().unwrap();
+            }
+        })
+    }
+
+    fn render_scene_segment(mut segment: RenderBufferSegmentMut, scene: &Scene) {
         let Some(camera) = scene.get_camera() else {
-            self.buffer.clear();
+            segment.clear();
             return;
         };
+
+        segment.clear();
 
         let shader = ShaderProgram::new(
             SceneInfo {
@@ -279,30 +335,12 @@ impl Renderer {
             },
         );
 
+        // println!("{:?}", segment.region());
+
         for object in scene.objects() {
-            self.render_object(object, &shader, camera);
+            Self::render_object(&mut segment, object, &shader, camera);
         }
     }
-
-    // pub fn render_test(&mut self) {
-    //     let a0 = vec2(-0.6, -0.5);
-    //     let b0 = vec2(-0.7, 0.3);
-    //     let c0 = vec2(-0.2, 0.4);
-    //     let d0 = vec2(-0.1, -0.2);
-    //     // self.draw_triangle((a0, b0, d0), rgb(0.5, 0.5, 0.5));
-    //     // self.draw_triangle((b0, c0, d0), rgb(0.5, 0.5, 0.5));
-
-    //     let a1 = vec2(0.2, -0.1);
-    //     let b1 = vec2(0.1, 0.3);
-    //     let c1 = vec2(0.6, 0.4);
-    //     let d1 = vec2(0.7, -0.2);
-    //     // self.draw_triangle((a1, b1, d1), rgb(0.5, 0.5, 0.5));
-    //     // self.draw_triangle((b1, c1, d1), rgb(0.5, 0.5, 0.5));
-
-    //     // self.draw_line(Line(a, b), 1.);
-    //     // self.draw_line(Line(b, c), 1.);
-    //     // self.draw_line(Line(c, a), 1.);
-    // }
 
     pub fn clear(&mut self) {
         self.buffer.clear()
