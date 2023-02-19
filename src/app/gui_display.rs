@@ -12,7 +12,7 @@ const WIDTH: u32 = 1200;
 const HEIGHT: u32 = 800;
 
 const BUFFER_HEIGHT: u32 = 1000;
-const THREAD_COUNT: u32 = 10;
+const THREAD_COUNT: u32 = 8;
 // const SEGMENT_HEIGHT: u32 = 10;
 
 pub fn run() {

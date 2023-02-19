@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use std::mem::swap;
 use std::str::SplitWhitespace;
 use std::sync::mpsc;
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, Instant};
 
 // use std::collections::HashSet;
 use ansi_parser::{AnsiParser, Output};
@@ -693,21 +693,20 @@ impl<'a, T> DoubleEndedIterator for DoubleEndedAnyIter<'a, T> {
 
 #[derive(Debug)]
 pub struct DeltaTimer {
-    last_time: SystemTime,
+    last_time: Instant,
 }
 
 impl DeltaTimer {
     pub fn new() -> Self {
-        let last_time = SystemTime::now();
+        let last_time = Instant::now();
         Self { last_time }
     }
 
     pub fn delta_time(&mut self) -> Duration {
-        let now = SystemTime::now();
+        let now = Instant::now();
 
-        let duration = now
-            .duration_since(self.last_time)
-            .expect("time went backwards");
+        let duration = now.duration_since(self.last_time);
+        // .expect("time went backwards");
         self.last_time = now;
 
         duration
@@ -719,7 +718,7 @@ impl DeltaTimer {
     }
 
     pub fn restart(&mut self) {
-        self.last_time = SystemTime::now();
+        self.last_time = Instant::now();
     }
 }
 
