@@ -1,6 +1,10 @@
 use std::time::Duration;
 
-use crate::{render_3d::*, update_moving_average, utils::DeltaTimer};
+use crate::{
+    debug_utils::{reset_timer, start_new_timer_frame, update_timer_label},
+    render_3d::*,
+    utils::DeltaTimer,
+};
 use pixels::{wgpu, Pixels, PixelsBuilder, SurfaceTexture};
 use winit::{
     dpi::PhysicalSize,
@@ -149,30 +153,25 @@ impl StateMachine {
                     self.state.time += delta_time;
                     self.state.delta_time = delta_time;
 
-                    let frame_time = update_moving_average!(delta_time.as_millis() as f64);
+                    start_new_timer_frame();
 
-                    let mut timer = DeltaTimer::new();
-                    // self.renderer.clear();
-                    let clear_time = update_moving_average!(timer.delta_time().as_millis() as f64);
+                    reset_timer();
+                    update_timer_label("clear render");
                     self.renderer.render_scene_multi_thread(&self.state.scene);
-                    let scene_time = update_moving_average!(timer.delta_time().as_millis() as f64);
+                    update_timer_label("scene render");
 
-                    self.pixels.draw_render_buffer(self.renderer.buffer(), self.renderer.segment_heights());
-                    let render_buffer_time =
-                        update_moving_average!(timer.delta_time().as_millis() as f64);
+                    self.pixels.draw_render_buffer(
+                        self.renderer.buffer(),
+                        self.renderer.segment_heights(),
+                    );
+                    update_timer_label("copy buffer");
 
-                    timer.restart();
                     if let Err(err) = self.pixels.render() {
                         eprintln!("pixels.render() failed: {err}");
                         *control_flow = ControlFlow::Exit;
                         return;
                     }
-                    let pixels_time = update_moving_average!(timer.delta_time().as_millis() as f64);
-
-                    println!(
-                        "clear render: {:.2} ms, scene render: {:.2} ms, copy buffer: {:.2} ms, pixels render: {:.2} ms, total frame: {:.2} ms",
-                        clear_time, scene_time, render_buffer_time, pixels_time, frame_time,
-                    );
+                    update_timer_label("pixels render");
                 }
                 Event::WindowEvent {
                     window_id,

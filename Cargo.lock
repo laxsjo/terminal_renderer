@@ -1544,6 +1544,7 @@ dependencies = [
  "approx",
  "colors-transform",
  "crossterm",
+ "indexmap",
  "itertools",
  "lazy_static",
  "num",
