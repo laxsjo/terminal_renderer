@@ -100,8 +100,6 @@ impl StateMachine {
             })
             .build()?;
 
-        // TODO: Fix me!!!!!!
-        // let renderer = todo!();
         let renderer = Renderer::new(
             buffer_size.width.max(1) as usize,
             buffer_size.height.max(1) as usize,
@@ -155,8 +153,8 @@ impl StateMachine {
 
                     start_new_timer_frame();
 
-                    reset_timer();
-                    update_timer_label("clear render");
+                    // reset_timer();
+                    // update_timer_label("clear render");
                     self.renderer.render_scene_multi_thread(&self.state.scene);
                     update_timer_label("scene render");
 

@@ -1,9 +1,10 @@
 use indexmap::IndexMap;
-use std::any::*;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::iter::Sum;
 use std::time::Instant;
+use std::{any::*, ops};
 // use vector_map::VecMap;
 
 type ValuesMap<T> = HashMap<ValueId__, T>;
@@ -13,9 +14,78 @@ const MOVING_AVERAGE_COUNT: usize = 20;
 thread_local! {
     static VALUES: RefCell<ValuesMap<Box<dyn Any>>> = RefCell::new(HashMap::new());
     static AVERAGES: RefCell<ValuesMap<(usize, [f64; MOVING_AVERAGE_COUNT])>> = RefCell::new(HashMap::new());
-    static DURATIONS: RefCell<IndexMap<&'static str, (usize, [f64; MOVING_AVERAGE_COUNT])>> = RefCell::new(IndexMap::new());
-    static TOTAL_DURATION: RefCell<(Instant, (usize, [f64; MOVING_AVERAGE_COUNT]))> = RefCell::new((Instant::now(), (0, [0.; MOVING_AVERAGE_COUNT])));
+    static DURATIONS: RefCell<IndexMap<&'static str, MovingSmartAverage<f64, MOVING_AVERAGE_COUNT>>> = RefCell::new(IndexMap::new());
+    static TOTAL_DURATION: RefCell<(Instant, MovingSmartAverage<f64, MOVING_AVERAGE_COUNT>)> = RefCell::new((Instant::now(), MovingSmartAverage::new()));
     static DURATIONS_TIME: RefCell<Instant> = RefCell::new(Instant::now());
+}
+
+const SCALE_DIFFERENCE_THRESHOLD: usize = 4;
+pub struct MovingSmartAverage<T, const SIZE: usize>
+where
+    T: ops::Add<Output = T>
+        + ops::Div<Output = T>
+        + PartialOrd<T>
+        + num::FromPrimitive
+        + num::Zero
+        + Copy
+        + Sum<T>,
+{
+    next_index: usize,
+    values: [T; SIZE],
+}
+
+impl<T, const SIZE: usize> MovingSmartAverage<T, SIZE>
+where
+    T: ops::Add<Output = T>
+        + ops::Div<Output = T>
+        + PartialOrd<T>
+        + num::FromPrimitive
+        + num::Zero
+        + Copy
+        + Sum<T>,
+{
+    pub fn new() -> Self {
+        Self {
+            next_index: 0,
+            values: [T::zero(); SIZE],
+        }
+    }
+
+    pub fn insert(&mut self, value: T) {
+        let old_average = self.average();
+        let scale_difference = value / old_average;
+        if scale_difference
+            >= T::from_usize(SCALE_DIFFERENCE_THRESHOLD).expect("to large threshold")
+        {
+            self.values = [value; SIZE];
+            return;
+        }
+
+        self.values[self.next_index] = value;
+        self.next_index += 1;
+        if self.next_index >= SIZE {
+            self.next_index = 0;
+        }
+    }
+
+    pub fn average(&self) -> T {
+        self.values.iter().cloned().sum::<T>() / T::from_usize(SIZE).expect("to large threshold")
+    }
+}
+
+impl<T, const SIZE: usize> Default for MovingSmartAverage<T, SIZE>
+where
+    T: ops::Add<Output = T>
+        + ops::Div<Output = T>
+        + PartialOrd<T>
+        + num::FromPrimitive
+        + num::Zero
+        + Copy
+        + Sum<T>,
+{
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 /// This is an internal type, which should not be used directly.
@@ -166,19 +236,13 @@ pub fn start_new_timer_frame() {
             let current_total_milis = now.duration_since(last_time).as_millis() as f64;
             total.0 = now;
 
-            let current_index = total.1 .0;
-            total.1 .1[current_index] = current_total_milis;
-            let current_index = &mut total.1 .0;
-            *current_index += 1;
-            if *current_index >= MOVING_AVERAGE_COUNT {
-                *current_index = 0;
-            }
+            total.1.insert(current_total_milis);
 
-            let average_total_milis = total.1 .1.iter().sum::<f64>() / MOVING_AVERAGE_COUNT as f64;
+            let average_total_milis = total.1.average();
 
             for duration in &*durations {
                 let label = *duration.0;
-                let milis = duration.1 .1.iter().sum::<f64>() / MOVING_AVERAGE_COUNT as f64;
+                let milis = duration.1.average();
 
                 print!("{}: {:.2} ms, ", label, milis);
             }
@@ -206,14 +270,8 @@ pub fn update_timer_label(label: &'static str) {
 
             let entry = durations.entry(label);
             entry
-                .and_modify(|average_buffer| {
-                    average_buffer.1[average_buffer.0] = milis;
-                    average_buffer.0 += 1;
-                    if average_buffer.0 >= MOVING_AVERAGE_COUNT {
-                        average_buffer.0 = 0;
-                    }
-                })
-                .or_insert((0, [milis; MOVING_AVERAGE_COUNT]));
+                .and_modify(|average_buffer| average_buffer.insert(milis))
+                .or_insert(MovingSmartAverage::new());
         });
     });
 }
